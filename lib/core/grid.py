@@ -1,3 +1,8 @@
+from OCC.Core.BRepPrimAPI import *
+from OCC.Core.BRepTools import *
+from OCC.Core.gp import *
+from OCC.Extend.TopologyUtils import *
+
 import matplotlib.path as mpl_path
 import numpy as np
 
@@ -11,46 +16,142 @@ class Grid:
   dims = []
   shape = None
   cells = []
+  nudge = []
   
-  def __init__(self, s, d, geo):
+  def __init__(self, s, d, geo, nudge):
     self.dims = d
-    self.scale = s
+    self.scale = float(s)
     self.shape = geo
-    verticies = []
-    # verticies = np.array(shape.get_verticies())
-    # geo_path = mpl_path.Path(verticies)
+    self.nudge = nudge
+    print(nudge)
     
     for i in range(self.dims[0]):
       for j in range(self.dims[1]):
         for k in range(self.dims[2]):
           # Initialize a cell to the grid, then see if it contains geometry
           new_cell = cell.Cell([i, j, k], self.scale)
-          
-          # For algorithm testing
-          if (i < 5) or (j < 5):
-            new_cell.set_geo_cell(True)
+
+          # For algorithm testing (and for basic 5x5, or for complex 10x5 + 5x5)
+          # if (i < 5) or (j < 5):
+          #   new_cell.set_geo_cell(True)
         
-          # Cell contains geometry iff the geometry intersects one of its edges
-          # or if an edge is wholly within the geometry bounds
-          lowers = new_cell.real_bounds_low()
-          uppers = new_cell.real_bounds_high()
-          # bot_left_pt = (float(lowers[0]), float(lowers[1]))
-          # bot_right_pt = (float(lowers[0]), float(uppers[1]))
-          # top_left_pt = (float(lowers[1]), float(lowers[0]))
-          # top_right_pt = (float(lowers[1]), float(uppers[1]))
-        
-          # top_edge = mpl_path.Path(np.array([top_left_pt, top_right_pt]))
-          # right_edge = mpl_path.Path(np.array([bot_rightt_pt, top_right_pt]))
-          # bot_edge = mpl_path.Path(np.array([bot_left_pt, bot_right_pt]))
-          # left_edge = mpl_path.Path(np.array([bot_left_pt, bot_right_pt]))
-          # for edge in [left_edge, right_edge, bot_edge, top_edge]:
-          #   if geo_path.intersects_path(edge) or geo_path.contains_path(edge):
-          #     new_cell.set_geo_cell(True)
-          #     break
-        self.cells.append(new_cell)    
+          self.cells.append(new_cell)    
+
+    # Start by flagging each cell with a vertex in it as a geometry cell
+    brt = BRep_Tool()
+    topo = TopologyExplorer(self.shape)
+    verts = topo.vertices()
+  
+    def __conv_to_inds(realx, realy, realz):
+      return [int((realx + self.nudge[0]) // self.scale), int((realy + self.nudge[1]) // self.scale), int((realz + self.nudge[2]) // self.scale)]
+  
+    for v in verts:
+      pt = brt.Pnt(v)
+      geo_cell_inds = __conv_to_inds(pt.X(), pt.Y(), pt.Z())
+      if (geo_cell_inds[0] < self.dims[0] and geo_cell_inds[1] < self.dims[1] and geo_cell_inds[2] < self.dims[2]):
+        self.get_cell(geo_cell_inds[0], geo_cell_inds[1], geo_cell_inds[2]).set_geo_cell(True)
+      
+    for k in range(self.dims[2]):
+      # Scan through each row and flag the cells in bewteen as geo cells
+      for i in range(self.dims[0]):
+        num_vert_cells = 0
+        start_col = 0
+        end_col = 0
+        for j in range(self.dims[1]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_col = j
+            elif num_vert_cells >= 2:
+              end_col = j
+        if num_vert_cells >= 2:
+          for j in range(start_col, end_col + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)
+      # And now columns
+      for j in range(self.dims[1]):
+        num_vert_cells = 0
+        start_row = 0
+        end_row = 0
+        for i in range(self.dims[0]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_row = i
+            elif num_vert_cells >= 2:
+              end_row = i
+        if num_vert_cells >= 2:
+          for i in range(start_row, end_row + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)            
+
+    for j in range(self.dims[1]):
+      # Scan through each row and flag the cells in bewteen as geo cells
+      for i in range(self.dims[0]):
+        num_vert_cells = 0
+        start_layer = 0
+        end_layer = 0
+        for k in range(self.dims[2]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_layer = k
+            elif num_vert_cells >= 2:
+              end_layer = k
+        if num_vert_cells >= 2:
+          for k in range(start_layer, end_layer + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)
+      # And now columns
+      for k in range(self.dims[2]):
+        num_vert_cells = 0
+        start_row = 0
+        end_row = 0
+        for i in range(self.dims[0]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_row = i
+            elif num_vert_cells >= 2:
+              end_row = i
+        if num_vert_cells >= 2:
+          for i in range(start_row, end_row + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)
+
+    for i in range(self.dims[0]):
+      # Scan through each row and flag the cells in bewteen as geo cells
+      for j in range(self.dims[1]):
+        num_vert_cells = 0
+        start_layer = 0
+        end_layer = 0
+        for k in range(self.dims[2]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_layer = k
+            elif num_vert_cells >= 2:
+              end_layer = k
+        if num_vert_cells >= 2:
+          for k in range(start_layer, end_layer + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)
+      # And now columns
+      for k in range(self.dims[2]):
+        num_vert_cells = 0
+        start_col = 0
+        end_col = 0
+        for j in range(self.dims[1]):
+          if self.get_cell(i, j, k).has_geometry():
+            num_vert_cells = num_vert_cells + 1
+            if num_vert_cells == 1:
+              start_col = j
+            elif num_vert_cells >= 2:
+              end_col = j
+        if num_vert_cells >= 2:
+          for j in range(start_col, end_col + 1):
+            self.get_cell(i, j, k).set_geo_cell(True)
 
   def get_cell(self, i, j, k):
-    return self.cells[i * self.dims[1] * self.dims[2] + j * self.dims[2] + k]
+    return self.cells[int(i * int(self.dims[1]) * int(self.dims[2]) + j * int(self.dims[2]) + k)]
+    
+  def get_nudge(self):
+    return self.nudge
   
   def get_cells(self):
     return self.cells
@@ -60,3 +161,6 @@ class Grid:
 
   def get_size(self):
     return int(self.dims[0]) * int(self.dims[1]) * int(self.dims[2])
+
+  def get_scale(self):
+    return self.scale  

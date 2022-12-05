@@ -62,26 +62,26 @@ class Solver:
     return res
     
   def __min_start_inds_at(self, direc, ind, res_dir):
-    res = 1e6
+    res = -1
     for r in self.rects:
       inds = r.get_start_cell().int_bounds()
       if inds[direc] != ind:
         continue
       else:
-        if inds[res_dir] < res:
+        if inds[res_dir] < res or res == -1:
           res = inds[res_dir]
-    return res
+    return int(res)
     
   def __max_start_inds_at(self, direc, ind, res_dir):
-    res = 0
+    res = -1
     for r in self.rects:
       inds = r.get_start_cell().int_bounds()
       if inds[direc] != ind:
         continue
       else:
-        if inds[res_dir] > res:
+        if inds[res_dir] > res or res == -1:
           res = inds[res_dir]
-    return res
+    return int(res)
     
   def setup_solver(self):
   # Place all the rectangles on the lowest section of the geometry
@@ -118,21 +118,30 @@ class Solver:
     # First assert there's a shared border with the two rectangles
     
     def __border_share(rect1, rect2):
-      # Check the four borders, can figure out corner cells through starts and ends
+      # Check the six borders, can figure out corner cells through starts and ends
       left_edge1 = rect1.get_start_cell().int_bounds()[0]
       bot_edge1 = rect1.get_start_cell().int_bounds()[1]
+      front_edge1 = rect1.get_start_cell().int_bounds()[2]
       right_edge1 = rect1.get_end_cell().int_bounds()[0]
       top_edge1 = rect1.get_end_cell().int_bounds()[1]
+      back_edge1 = rect1.get_end_cell().int_bounds()[2]
       
       left_edge2 = rect2.get_start_cell().int_bounds()[0]
       bot_edge2 = rect2.get_start_cell().int_bounds()[1]
+      front_edge2 = rect2.get_start_cell().int_bounds()[2]
       right_edge2 = rect2.get_end_cell().int_bounds()[0]
-      top_edge2 = rect2.get_end_cell().int_bounds()[1]   
+      top_edge2 = rect2.get_end_cell().int_bounds()[1] 
+      back_edge2 = rect2.get_end_cell().int_bounds()[2]
 
-      return ((top_edge1 == bot_edge2 - 1 and rect1.length(0) == rect2.length(0))
-             or (bot_edge1 == top_edge2 + 1 and rect1.length(0) == rect2.length(0))
-             or (right_edge1 == left_edge2 - 1 and rect1.length(1) == rect2.length(1))
-             or (left_edge1 == right_edge2 + 1 and rect1.length(1) == rect2.length(1)))
+      def __length_check(rect1, rect2, ind):
+        return rect1.length(ind) == rect2.length(ind)      
+
+      return ((top_edge1 == bot_edge2 - 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2))
+             or (bot_edge1 == top_edge2 + 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2))
+             or (right_edge1 == left_edge2 - 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2))
+             or (left_edge1 == right_edge2 + 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2))
+             or (back_edge1 == front_edge2 - 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 1))
+             or (front_edge1 == back_edge2 + 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 1)))
 
     if not __border_share(rect1, rect2):
       print("Rectangles do not share a border, aborting merge")
@@ -143,7 +152,7 @@ class Solver:
     
     # Find the lower indexed rectangle to initialize the new merged one
     
-    if start1.int_bounds()[0] < start2.int_bounds()[0] or start1.int_bounds()[1] < start2.int_bounds()[1]:
+    if start1.int_bounds()[0] < start2.int_bounds()[0] or start1.int_bounds()[1] < start2.int_bounds()[1] or start1.int_bounds()[2] < start2.int_bounds()[2]:
       return decomp.Decomp(self.grid, start1, rect2.get_end_cell())
     else: 
       return decomp.Decomp(self.grid, start2, rect1.get_end_cell())
@@ -151,33 +160,42 @@ class Solver:
   def run_solver(self):
     merge_dir = -1
     merge_count = 0
+    dir_changes = 0
+    first_pass = True
+    
+    last_j = -1
+    last_k = -1
+    full_pass = False
+    
+    def reset_stored_inds():
+      last_j = -1
+      last_k = -1
     
     while (len(self.start_cell_full.values()) > self.target_size):
-      merge_dir = (merge_dir + 1) % 3
-      print("Merge direction is ", merge_dir)
       min_inds = self.__min_start_inds()
       max_inds = self.__max_start_inds()
-      
+    
+      if not full_pass:
+        merge_dir = (merge_dir + 1) % 3
+      full_pass = True
       search_dir1 = (merge_dir + 1) % 3
       search_dir2 = (merge_dir + 2) % 3
       failed_dirs = 0
-      merged = False
-      
+      print("Merge direction is ", merge_dir)     
+
       for i in range(min_inds[merge_dir], max_inds[merge_dir] + 1):
         min_inds1 = self.__min_start_inds_at(merge_dir, i, search_dir1)
         min_inds2 = self.__min_start_inds_at(merge_dir, i, search_dir2)
         max_inds1 = self.__max_start_inds_at(merge_dir, i, search_dir1)
         max_inds2 = self.__max_start_inds_at(merge_dir, i, search_dir2)
+        merged = False
         
         for j in range(min_inds1, max_inds1 + 1):
+          if merged:
+            break
           for k in range(min_inds2, max_inds2 + 1):
-            base_rect_inds = self.__min_start_inds()
-            # TODO: The above line only works if we have uniform geometry
-            base_rect_inds[merge_dir] = i
-            base_rect = self.__rect_lookup(base_rect_inds)
-            if base_rect == None:
-              print("Failed merge: no rectangle with ", i, j, k)
-              continue
+            if merged:
+              break
 
             rect_to_merge_inds = [0, 0, 0]
             rect_to_merge_inds[merge_dir] = i
@@ -185,7 +203,23 @@ class Solver:
             rect_to_merge_inds[search_dir2] = k
             rect_to_merge = self.__rect_lookup(rect_to_merge_inds)
             if rect_to_merge == None:
-              print("Failed merge: couldn't find rect with indices ", i, j, k)
+              # print("Failed merge: couldn't find rect with indices ", i, j, k)
+              full_pass = False
+              continue
+              
+            base_rect_inds = self.__min_start_inds()
+            # TODO: The above line only works if we have uniform geometry
+            base_rect_inds[merge_dir] = i
+            # Fix for constant layer merges
+            base_rect_inds[2] = rect_to_merge.get_start_cell().int_bounds()[2]
+            # if last_j >= 0:
+              # base_rect_inds[search_dir1] = last_j
+            # if last_k >= 0:
+              # base_rect_inds[search_dir2]= last_k
+            base_rect = self.__rect_lookup(base_rect_inds)
+            if base_rect == None:
+              # print("Failed merge: no rectangle with ", i, j, k)
+              full_pass = False
               continue
               
             merged_rect = self.merge_rect(base_rect, rect_to_merge)
@@ -195,19 +229,32 @@ class Solver:
               self.start_cell_full.update({tuple(merged_rect.get_start_cell().int_bounds()) : merged_rect})
 
               merged = True
+              last_j = merged_rect.get_start_cell().int_bounds()[search_dir1]
+              last_k = merged_rect.get_start_cell().int_bounds()[search_dir2]
               print("Merge successful: rect goes from ", merged_rect.get_start_cell().int_bounds(), " to ", merged_rect.get_end_cell().int_bounds())
               merge_count = merge_count + 1
               failed_dirs = 0
               if len(self.start_cell_full.values()) <= self.target_size:
                 return list(self.start_cell_full.values())
             else:
-              print("Merge failed: rect at", base_rect.get_start_cell().int_bounds(), "couldn't merge with", rect_to_merge.get_start_cell().int_bounds())
+              full_pass = False
 
       if not merged:
         failed_dirs = failed_dirs + 1
         if failed_dirs == 3:
           print("No more legal merges found, returning decomp of size ", len(self.start_cell_full.values()), " instead.")
           break
-      merged = False
-              
+
+      if first_pass and dir_changes >= 3:
+        first_pass = False
+      
+      if first_pass:
+        if last_j + 2 >= max_inds[search_dir1]:
+          dir_changes = dir_changes + 1
+        else:
+          last_j = last_j + 2
+      else:
+        dir_changes = dir_changes + 1
+        reset_stored_inds()        
+
     return list(self.start_cell_full.values())

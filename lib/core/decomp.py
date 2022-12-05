@@ -1,4 +1,6 @@
 import math
+import matplotlib.pyplot as plt
+import numpy as np
 
 from core import cell, grid
 
@@ -70,6 +72,69 @@ class Decomp:
     # Return length of rectangle in the i direction
     return self.end_cell.int_bounds()[i] - self.start_cell.int_bounds()[i] + 1
     
-  # TODO: Need an exclusion function, return the cell region not covered by the panel
-  # TxsSlab's complement() function
+  def draw(self, ax):
+    # Lower rectangle
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
     
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    # Upper rectangle
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    # Connect them
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1], self.start_cell.real_bounds_low()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0], self.start_cell.real_bounds_low()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.start_cell.real_bounds_low()[1], self.start_cell.real_bounds_low()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    edge1x = [self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0], self.end_cell.real_bounds_high()[0] - self.grid.get_nudge()[0]]
+    edge1y = [self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1], self.end_cell.real_bounds_high()[1] - self.grid.get_nudge()[1]]
+    edge1z = [self.start_cell.real_bounds_low()[2] - self.grid.get_nudge()[2], self.end_cell.real_bounds_high()[2] - self.grid.get_nudge()[2]]
+    ax.plot3D(edge1x, edge1y, edge1z, color='red')
+    
+    # And don't ask me to do that again
+                 
