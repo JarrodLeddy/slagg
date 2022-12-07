@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 import numpy as np
+import optparse
 from stl import mesh
 import sys
 
@@ -18,14 +19,22 @@ mygrid = None
 mygeo = None
 
 def main():
-  filename = sys.argv[1]
-  dimx = sys.argv[2]
-  dimy = sys.argv[3]
-  dimz = sys.argv[4]
-  scale = sys.argv[5]
-  numrects = sys.argv[6]
+  parser = setup_options()
+  options, args = parser.parse_args()
 
-  perform_setup(filename, int(dimx), int(dimy), int(dimz), float(scale), int(numrects))  
+  perform_setup(options)  
+
+def setup_options():
+  parser = optparse.OptionParser(usage="%prog [options] files")
+  
+  parser.add_option("-f", "--file", help="Geometry file in .stp format", dest="filename")
+  parser.add_option("-x", help="Size of grid in x-direction", dest="dimx")
+  parser.add_option("-y", help="Size of grid in y-direction", dest="dimy")
+  parser.add_option("-z", help="Size of grid in z-direction", dest="dimz")
+  parser.add_option("-d", "--delta", help="Physical size of each cell on grid", dest="scale")
+  parser.add_option("-n", "--numrects", help="Number of desired rectangles in final decomp", dest="numrects")
+  
+  return parser
 
 def draw_trial_geo(res, dimx, dimy, dimz, scale):
   my_renderer = x3dom_renderer.X3DomRenderer()
@@ -108,14 +117,17 @@ def dev_draw_decomp(res, dimx, dimy, dimz, scale, shape):
   
   for r in res:
     r.draw(ax)
+
+  scale = my_mesh.points.flatten("C")
+  ax.auto_scale_xyz(scale, scale, scale)
     
   plt.show()
 
-def perform_setup(filename, dimx, dimy, dimz, scale, numrects):
-  mygeo = geometry.Geometry(filename)
+def perform_setup(options):
+  mygeo = geometry.Geometry(options.filename)
   shape = mygeo.read_cad()
   topo = TopologyExplorer(shape)
-  print("Read geometry file " + filename)
+  print("Read geometry file " + options.filename)
   verts = topo.vertices()
   
   nudge = [0.0, 0.0, 0.0]
@@ -130,14 +142,15 @@ def perform_setup(filename, dimx, dimy, dimz, scale, numrects):
     if abs(pnt.Z()) > nudge[2] and pnt.Z() < 0.0:
       nudge[2] = abs(pnt.Z())      
   
-  mygrid = grid.Grid(scale, [dimx, dimy, dimz], shape, nudge)
+  mygrid = grid.Grid(float(options.scale), [int(options.dimx), int(options.dimy), int(options.dimz)], shape, nudge)
   # mygeo.visualize()
   
-  mysolve = solver.Solver(mygrid, numrects)
+  mysolve = solver.Solver(mygrid, int(options.numrects))
   res = mysolve.run_solver()
+  print(len(res))
   # draw_trial_geo(res, int(dimx), int(dimy), int(dimz), float(scale))
   # dev_draw(res, int(dimx), int(dimy), int(dimz), float(scale), shape, nudge)
-  dev_draw_decomp(res, int(dimx), int(dimy), int(dimz), float(scale), shape)
+  dev_draw_decomp(res, int(options.dimx), int(options.dimy), int(options.dimz), float(options.scale), shape)
   
 if __name__ == '__main__':
   main()
