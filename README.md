@@ -15,14 +15,16 @@ Then to run a solve:
 
 ```
 cd path/to/adjhomopt/rectcov/lib
-python main.py mycad.stp x y z delta n
+python main.py -f mycad.stp -x nx -y ny -z nz -d delta -n nrects
 ```
 
 Where...
 
 * mycad.stp is a STEP geometry file (the repo has a sample file called C100_export.stp)
-* x is the x-dimension of the grid to be superimposed on the geometry
-* y is the y-dimension of the grid to be superimposed on the geometry
-* z is the z-dimension of the grid to be superimposed on the geometry
+* nx is the x-dimension of the grid to be superimposed on the geometry
+* ny is the y-dimension of the grid to be superimposed on the geometry
+* nz is the z-dimension of the grid to be superimposed on the geometry
 * delta is the uniform length, width and height of the grid cells
-* n is the target number of rectangles to be retuned in the final decomposition
+* nrects is the target number of rectangles to be retuned in the final decomposition
+
+The flags and their corresponding arguments may be added in whatever order desired
