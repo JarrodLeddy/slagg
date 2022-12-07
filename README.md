@@ -14,7 +14,7 @@ NOTE: From now on, always use conda install -c conda-forge if more packages need
 Then to run a solve:
 
 ```
-cd path/to/adjhomopt/rectcov/lib
+cd path/to/slagg/lib
 python main.py -f mycad.stp -x nx -y ny -z nz -d delta -n nrects
 ```
 
