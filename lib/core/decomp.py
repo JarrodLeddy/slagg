@@ -1,8 +1,16 @@
+from enum import auto, Enum
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 
 from core import cell, grid
+
+class RectStartState(Enum):
+  LEDGE = auto()
+  EDGE = auto()
+  VERTEX = auto()
+  INTERIOR = auto()
+  NONE = auto()
 
 class Decomp:
   start_cell = None
@@ -17,6 +25,13 @@ class Decomp:
     self.end_cell = end
     self.grid = mygrid
     self.dim = len(self.start_cell.int_bounds())
+    self.state = RectStartState.NONE
+
+  def get_state(self):
+    return self.state
+    
+  def set_state(self, new_state):
+    self.state = new_state
 
   def num_cells(self):
     # Assume rectagular grid, so num_cells is just product of each dimension size

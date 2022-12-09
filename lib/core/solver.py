@@ -2,6 +2,35 @@ from core import decomp, grid
 
 import collections
 
+"""
+To implement: to prevent stalling and loops...
+
+1) On initializaiton, for each geo cell, count its neighboring geo cells (corners don't count) on that layer
+   - If 0, something went very wrong; abort with error message
+   - If 1, mark LEDGE
+   - If 2 and not all three share an index in one direction, mark VERTEX
+   - If 2 and the neighbors are in a line, mark EDGE
+   - If 3, mark EDGE
+   - If 4, mark INTERIOR
+   
+   Use enum to help with this
+   
+2) Create a set (or dictionary) of all vertex points for reference in the solver code
+
+3) Make sure the merged boolean is visible in the while-loop scope
+
+4) Instead of taking the base_rect at __min_start_inds(), select a rectangle that uses a vertex cell instead
+   4a) Figure out a way to merge "backwards" as well i.e. a higher indexed rectangle into a lower one
+
+5) If merged is false after an iteration through i...
+   - Increase the failed_dir count by 1
+   - If failed_dir = 3, assume no more work is to be done with that vertex and kick it out of the dictionary
+   - Return partial decomp if the dictionary is empty at that point
+   - Else, reset failed_dir to 0 and go back to the top
+   
+Make this happen for Monday or at least show the framework for Leddy
+"""
+
 class Solver:
 
   grid = None
@@ -20,6 +49,38 @@ class Solver:
     for r in self.rects:
       inds = r.get_start_cell().int_bounds()
       self.start_cell_full[tuple(inds)] = r
+      
+    for r in self.rects:
+      neighbor_count = 0
+      is_edge = False
+      base_inds = r.get_start_cell().int_bounds()
+      if self.__rect_lookup([base_inds[0] + 1, base_inds[1], base_inds[2]]) is not None:
+        neighbor_count = neighbor_count + 1
+      if self.__rect_lookup([base_inds[0] - 1, base_inds[1], base_inds[2]]) is not None:
+        neighbor_count = neighbor_count + 1
+        if self.__rect_lookup([base_inds[0] + 1, base_inds[1], base_inds[2]]) is not None:
+          is_edge = True
+      if self.__rect_lookup([base_inds[0], base_inds[1] + 1, base_inds[2]]) is not None:
+        neighbor_count = neighbor_count + 1
+      if self.__rect_lookup([base_inds[0], base_inds[1] - 1, base_inds[2]]) is not None:
+        neighbor_count = neighbor_count + 1
+        if self.__rect_lookup([base_inds[0], base_inds[1] + 1, base_inds[2]]) is not None:
+          is_edge = True
+        
+      if neighbor_count == 1:
+        r.set_state(decomp.RectStartState.LEDGE)
+      elif neighbor_count == 3:
+        r.set_state(decomp.RectStartState.EDGE)
+      elif neighbor_count == 4:
+        r.set_state(decomp.RectStartState.INTERIOR)
+      elif neighbor_count == 2:
+        if is_edge:
+          r.set_state(decomp.RectStartState.EDGE)
+        else:
+          r.set_state(decomp.RectStartState.VERTEX)
+      else:
+        # Make an exception class here to explain what went wrong, we're only here if neighbor_count is 0 or more than 4
+        r.set_state(decomp.RectStartState.NONE)
 
     self.target_size = dec_size
       
