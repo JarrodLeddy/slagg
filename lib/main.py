@@ -154,3 +154,9 @@ def perform_setup(options):
   
 if __name__ == '__main__':
   main()
+  
+"""
+Generalizations for next time:
+ - Variable deltas in different directions (dx != dy != dz)
+ - Specify where we want to start gridding (not always the origin). Make sure that we can select a slice of the geometry to work on
+"""

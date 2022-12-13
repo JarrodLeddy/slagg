@@ -37,6 +37,7 @@ class Solver:
   target_size = 0
   rects = []
   start_cell_full = {}
+  vert_rects = []
   
   def __init__(self, grid, dec_size):
     self.grid = grid
@@ -49,7 +50,7 @@ class Solver:
     for r in self.rects:
       inds = r.get_start_cell().int_bounds()
       self.start_cell_full[tuple(inds)] = r
-      
+
     for r in self.rects:
       neighbor_count = 0
       is_edge = False
@@ -69,20 +70,27 @@ class Solver:
         
       if neighbor_count == 1:
         r.set_state(decomp.RectStartState.LEDGE)
+        self.__rect_lookup(base_inds).set_state(decomp.RectStartState.LEDGE)
       elif neighbor_count == 3:
         r.set_state(decomp.RectStartState.EDGE)
+        self.__rect_lookup(base_inds).set_state(decomp.RectStartState.EDGE)
       elif neighbor_count == 4:
         r.set_state(decomp.RectStartState.INTERIOR)
+        self.__rect_lookup(base_inds).set_state(decomp.RectStartState.INTERIOR)
       elif neighbor_count == 2:
         if is_edge:
           r.set_state(decomp.RectStartState.EDGE)
+          self.__rect_lookup(base_inds).set_state(decomp.RectStartState.EDGE)
         else:
           r.set_state(decomp.RectStartState.VERTEX)
+          self.__rect_lookup(base_inds).set_state(decomp.RectStartState.VERTEX)
       else:
         # Make an exception class here to explain what went wrong, we're only here if neighbor_count is 0 or more than 4
         r.set_state(decomp.RectStartState.NONE)
+        self.__rect_lookup(base_inds).set_state(decomp.RectStartState.NONE)
 
     self.target_size = dec_size
+    self.vert_rects = [r for r in self.rects if r.get_state() == decomp.RectStartState.VERTEX]
       
   def __check_rect_geometry(self):
   # Check each rectangle to see if it's full of geometry
@@ -242,7 +250,8 @@ class Solver:
       search_dir1 = (merge_dir + 1) % 3
       search_dir2 = (merge_dir + 2) % 3
       failed_dirs = 0
-      print("Merge direction is ", merge_dir)     
+      print("Merge direction is ", merge_dir)  
+      # Loop over vertex points?      
 
       for i in range(min_inds[merge_dir], max_inds[merge_dir] + 1):
         min_inds1 = self.__min_start_inds_at(merge_dir, i, search_dir1)
@@ -267,10 +276,12 @@ class Solver:
               # print("Failed merge: couldn't find rect with indices ", i, j, k)
               full_pass = False
               continue
-              
+                        
             base_rect_inds = self.__min_start_inds()
+            # if len(self.vert_rects) > 0:
+              # base_rect_inds = self.vert_rects[0].get_start_cell().int_bounds()
             # TODO: The above line only works if we have uniform geometry
-            base_rect_inds[merge_dir] = i
+            # base_rect_inds[merge_dir] = i
             # Fix for constant layer merges
             base_rect_inds[2] = rect_to_merge.get_start_cell().int_bounds()[2]
             # if last_j >= 0:
@@ -280,6 +291,7 @@ class Solver:
             base_rect = self.__rect_lookup(base_rect_inds)
             if base_rect == None:
               # print("Failed merge: no rectangle with ", i, j, k)
+              # del(self.vert_rects[0])
               full_pass = False
               continue
               
@@ -304,6 +316,7 @@ class Solver:
         failed_dirs = failed_dirs + 1
         if failed_dirs == 3:
           print("No more legal merges found, returning decomp of size ", len(self.start_cell_full.values()), " instead.")
+          # del(self.vert_rects[0])
           break
 
       if first_pass and dir_changes >= 3:
