@@ -1,7 +1,7 @@
 class Cell:
 
   inds = []
-  scale = 1.0
+  scale = []
   geo_cell = False
   # All cells are 3D
 
@@ -19,7 +19,7 @@ class Cell:
     for i in range(self.dim):
       # idx: index array of cell
       # scale: scales of each individual cell (assume uniformity)
-      coords.append(float(self.inds[i]) * float(self.scale))
+      coords.append(float(self.inds[i]) * float(self.scale[i]))
     return coords
     
   def real_bounds_high(self):
@@ -27,7 +27,7 @@ class Cell:
     for i in range(self.dim):
       # idx: index array of cell
       # scale: scales of each individual cell (assume uniformity)
-      coords.append(float(self.inds[i] + 1) * float(self.scale))
+      coords.append(float(self.inds[i] + 1) * float(self.scale[i]))
     return coords
     
   def has_geometry(self):

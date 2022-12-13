@@ -28,10 +28,13 @@ def setup_options():
   parser = optparse.OptionParser(usage="%prog [options] files")
   
   parser.add_option("-f", "--file", help="Geometry file in .stp format", dest="filename")
-  parser.add_option("-x", help="Size of grid in x-direction", dest="dimx")
-  parser.add_option("-y", help="Size of grid in y-direction", dest="dimy")
-  parser.add_option("-z", help="Size of grid in z-direction", dest="dimz")
-  parser.add_option("-d", "--delta", help="Physical size of each cell on grid", dest="scale")
+  parser.add_option("--nx", help="Size of grid in x-direction", dest="dimx")
+  parser.add_option("--ny", help="Size of grid in y-direction", dest="dimy")
+  parser.add_option("--nz", help="Size of grid in z-direction", dest="dimz")
+  parser.add_option("--dx", "--deltax", help="Physical size of each cell in x", dest="scalex")
+  parser.add_option("--dy", "--deltay", help="Physical size of each cell in y", dest="scaley")
+  parser.add_option("--dz", "--deltaz", help="Physical size of each cell in z", dest="scalez")
+  parser.add_option("--sz", "--startz", help="Start of the grid in the z-direction", dest="startz", default=0.0)
   parser.add_option("-n", "--numrects", help="Number of desired rectangles in final decomp", dest="numrects")
   
   return parser
@@ -59,7 +62,7 @@ def draw_trial_geo(res, dimx, dimy, dimz, scale):
         lengths.append(float(rect.length(idx)))
 
     start_pt = gp_Pnt(float(lower_corner[0]), float(lower_corner[1]), float(lower_corner[2]))
-    decomp_box = BRepPrimAPI_MakeBox(start_pt, float(lengths[0] * scale), float(lengths[1] * scale), float(lengths[2] * scale)).Shape()
+    decomp_box = BRepPrimAPI_MakeBox(start_pt, float(lengths[0] * scale[0]), float(lengths[1] * scale[1]), float(lengths[2] * scale[2])).Shape()
     # outline_box = BRepPrimAPI_MakeBox(start_pt, float((rect.length(0) + 0.01) * scale), float((rect.length(1) + 0.01) * scale), float(rect.length(2) * scale)).Shape()
     boxes.append(decomp_box)
     # outlines.append(outline_box)
@@ -102,7 +105,7 @@ def dev_draw(res, dimx, dimy, dimz, scale, shape, nudge):
   ax.scatter(xs, ys, zs, marker='o', color='red')
   
   scale = my_mesh.points.flatten("C")
-  ax.auto_scale_xyz(scale, scale, scale)
+  ax.auto_scale_xyz(scale[0], scale[1], scale[2])
   
   plt.show()
   
@@ -119,7 +122,7 @@ def dev_draw_decomp(res, dimx, dimy, dimz, scale, shape):
     r.draw(ax)
 
   scale = my_mesh.points.flatten("C")
-  ax.auto_scale_xyz(scale, scale, scale)
+  ax.auto_scale_xyz(scale[0], scale[1], scale[2])
     
   plt.show()
 
@@ -129,6 +132,7 @@ def perform_setup(options):
   topo = TopologyExplorer(shape)
   print("Read geometry file " + options.filename)
   verts = topo.vertices()
+  scale = [float(options.scalex), float(options.scaley), float(options.scalez)]
   
   nudge = [0.0, 0.0, 0.0]
   
@@ -142,15 +146,18 @@ def perform_setup(options):
     if abs(pnt.Z()) > nudge[2] and pnt.Z() < 0.0:
       nudge[2] = abs(pnt.Z())      
   
+  nudge[2] = nudge[2] + options.sz
   mygrid = grid.Grid(float(options.scale), [int(options.dimx), int(options.dimy), int(options.dimz)], shape, nudge)
   # mygeo.visualize()
   
   mysolve = solver.Solver(mygrid, int(options.numrects))
   res = mysolve.run_solver()
   print(len(res))
+  
+  #TODO: Adjust these methods for scale being a list instead of just a scalar
   # draw_trial_geo(res, int(dimx), int(dimy), int(dimz), float(scale))
   # dev_draw(res, int(dimx), int(dimy), int(dimz), float(scale), shape, nudge)
-  dev_draw_decomp(res, int(options.dimx), int(options.dimy), int(options.dimz), float(options.scale), shape)
+  # dev_draw_decomp(res, int(options.dimx), int(options.dimy), int(options.dimz), float(options.scale), shape)
   
 if __name__ == '__main__':
   main()

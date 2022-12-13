@@ -12,7 +12,7 @@ from core import cell, geometry
 class Grid:
 
   # Assume uniform scale and rectangular array of cells
-  scale = 1.0
+  scale = []
   dims = []
   shape = None
   cells = []
@@ -20,7 +20,7 @@ class Grid:
   
   def __init__(self, s, d, geo, nudge):
     self.dims = d
-    self.scale = float(s)
+    self.scale = s
     self.shape = geo
     self.nudge = nudge
     print(nudge)
@@ -43,7 +43,7 @@ class Grid:
     verts = topo.vertices()
   
     def __conv_to_inds(realx, realy, realz):
-      return [int((realx + self.nudge[0]) // self.scale), int((realy + self.nudge[1]) // self.scale), int((realz + self.nudge[2]) // self.scale)]
+      return [int((realx + self.nudge[0]) // self.scale[0]), int((realy + self.nudge[1]) // self.scale[1]), int((realz + self.nudge[2]) // self.scale[2])]
   
     for v in verts:
       pt = brt.Pnt(v)
