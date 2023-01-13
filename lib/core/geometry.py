@@ -4,6 +4,7 @@ from OCC.Display.WebGl import x3dom_renderer
 
 import os
 
+
 class Geometry:
 
   filename = None

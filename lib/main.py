@@ -34,7 +34,7 @@ def setup_options():
   parser.add_option("--dx", "--deltax", help="Physical size of each cell in x", dest="scalex")
   parser.add_option("--dy", "--deltay", help="Physical size of each cell in y", dest="scaley")
   parser.add_option("--dz", "--deltaz", help="Physical size of each cell in z", dest="scalez")
-  parser.add_option("--sz", "--startz", help="Start of the grid in the z-direction", dest="startz", default=0.0)
+  parser.add_option("--sz", "--startz", help="Start of the grid in the z-direction (defaults to 0.0)", dest="startz", default=0.0)
   parser.add_option("-n", "--numrects", help="Number of desired rectangles in final decomp", dest="numrects")
   
   return parser
@@ -146,8 +146,8 @@ def perform_setup(options):
     if abs(pnt.Z()) > nudge[2] and pnt.Z() < 0.0:
       nudge[2] = abs(pnt.Z())      
   
-  nudge[2] = nudge[2] + options.sz
-  mygrid = grid.Grid(float(options.scale), [int(options.dimx), int(options.dimy), int(options.dimz)], shape, nudge)
+  nudge[2] = nudge[2] + options.startz
+  mygrid = grid.Grid(scale, [int(options.dimx), int(options.dimy), int(options.dimz)], shape, nudge)
   # mygeo.visualize()
   
   mysolve = solver.Solver(mygrid, int(options.numrects))
