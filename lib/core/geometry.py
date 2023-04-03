@@ -18,7 +18,6 @@ class Geometry:
     step_reader.ReadFile(self.filename)
     step_reader.TransferRoot()
     self.myshape = step_reader.Shape()
-    print(type(self.myshape))
     return self.myshape
     
   def translate_to_step(self, reload):

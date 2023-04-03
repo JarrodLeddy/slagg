@@ -52,6 +52,7 @@ class Solver:
       self.start_cell_full[tuple(inds)] = r
 
     for r in self.rects:
+      # Figure cell status in relation to geometry
       neighbor_count = 0
       is_edge = False
       base_inds = r.get_start_cell().int_bounds()
@@ -203,12 +204,12 @@ class Solver:
       back_edge2 = rect2.get_end_cell().int_bounds()[2]
 
       def __length_check(rect1, rect2, ind):
-        return rect1.length(ind) == rect2.length(ind)      
-
-      return ((top_edge1 == bot_edge2 - 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2))
-             or (bot_edge1 == top_edge2 + 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2))
-             or (right_edge1 == left_edge2 - 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2))
-             or (left_edge1 == right_edge2 + 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2))
+        return rect1.length(ind) == rect2.length(ind)  
+        
+      return ((top_edge1 == bot_edge2 - 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2) and       left_edge1 == left_edge2 and right_edge1 == right_edge2)
+             or (bot_edge1 == top_edge2 + 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 2) and left_edge1 == left_edge2 and right_edge1 == right_edge2)
+             or (right_edge1 == left_edge2 - 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2) and top_edge1 == top_edge2 and bot_edge1 == bot_edge2)
+             or (left_edge1 == right_edge2 + 1 and __length_check(rect1, rect2, 1) and __length_check(rect1, rect2, 2) and top_edge1 == top_edge2 and bot_edge1 == bot_edge2)
              or (back_edge1 == front_edge2 - 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 1))
              or (front_edge1 == back_edge2 + 1 and __length_check(rect1, rect2, 0) and __length_check(rect1, rect2, 1)))
 
@@ -231,6 +232,8 @@ class Solver:
     merge_count = 0
     dir_changes = 0
     first_pass = True
+    backward = True
+    merged_last = False
     
     last_j = -1
     last_k = -1
@@ -243,27 +246,48 @@ class Solver:
     while (len(self.start_cell_full.values()) > self.target_size):
       min_inds = self.__min_start_inds()
       max_inds = self.__max_start_inds()
+      
+      # Only change the loop direction if no merges were found on the last run
+      if not merged_last:
+        backward = False if backward else True
     
-      if not full_pass:
+      if not full_pass and not backward:
         merge_dir = (merge_dir + 1) % 3
       full_pass = True
       search_dir1 = (merge_dir + 1) % 3
       search_dir2 = (merge_dir + 2) % 3
       failed_dirs = 0
-      print("Merge direction is ", merge_dir)  
-      # Loop over vertex points?      
+      # Loop over vertex points?
+      # Eventually...for now we can do a greedy approach and just make sure we don't
+      # merge two cells on opposite ends of the geometry. Just enforce boundaries
+      
+      i_range = None
+      j_range = None
+      k_range = None
+      # For negative looping
+      if not backward:
+        i_range = range(min_inds[merge_dir], max_inds[merge_dir] + 1)
+      else:
+        i_range = range(max_inds[merge_dir], min_inds[merge_dir] - 1, -1)
 
-      for i in range(min_inds[merge_dir], max_inds[merge_dir] + 1):
+      for i in i_range:
         min_inds1 = self.__min_start_inds_at(merge_dir, i, search_dir1)
         min_inds2 = self.__min_start_inds_at(merge_dir, i, search_dir2)
         max_inds1 = self.__max_start_inds_at(merge_dir, i, search_dir1)
         max_inds2 = self.__max_start_inds_at(merge_dir, i, search_dir2)
         merged = False
         
-        for j in range(min_inds1, max_inds1 + 1):
+        if not backward:        
+          j_range = range(min_inds1, max_inds1 + 1)
+          k_range = range(min_inds2, max_inds2 + 1)
+        else:
+          j_range = range(max_inds1, min_inds1 - 1, -1)
+          k_range = range(max_inds2, min_inds2 - 1, -1)
+        
+        for j in j_range:
           if merged:
             break
-          for k in range(min_inds2, max_inds2 + 1):
+          for k in k_range:
             if merged:
               break
 
@@ -272,16 +296,17 @@ class Solver:
             rect_to_merge_inds[search_dir1] = j
             rect_to_merge_inds[search_dir2] = k
             rect_to_merge = self.__rect_lookup(rect_to_merge_inds)
-            if rect_to_merge == None:
+            if rect_to_merge is None:
               # print("Failed merge: couldn't find rect with indices ", i, j, k)
               full_pass = False
               continue
                         
             base_rect_inds = self.__min_start_inds()
-            # if len(self.vert_rects) > 0:
-              # base_rect_inds = self.vert_rects[0].get_start_cell().int_bounds()
+            if len(self.vert_rects) > 0:
+              base_rect_inds = self.vert_rects[0].get_start_cell().int_bounds()
             # TODO: The above line only works if we have uniform geometry
-            # base_rect_inds[merge_dir] = i
+            base_rect_inds[merge_dir] = i
+            
             # Fix for constant layer merges
             base_rect_inds[2] = rect_to_merge.get_start_cell().int_bounds()[2]
             # if last_j >= 0:
@@ -289,14 +314,15 @@ class Solver:
             # if last_k >= 0:
               # base_rect_inds[search_dir2]= last_k
             base_rect = self.__rect_lookup(base_rect_inds)
-            if base_rect == None:
+            if base_rect is None:
               # print("Failed merge: no rectangle with ", i, j, k)
               # del(self.vert_rects[0])
               full_pass = False
               continue
               
+            # Also make sure these indices actually border each other
             merged_rect = self.merge_rect(base_rect, rect_to_merge)
-            if merged_rect != None:
+            if merged_rect is not None:
               del self.start_cell_full[tuple(rect_to_merge_inds)]
               del self.start_cell_full[tuple(base_rect_inds)]
               self.start_cell_full.update({tuple(merged_rect.get_start_cell().int_bounds()) : merged_rect})
@@ -319,16 +345,8 @@ class Solver:
           # del(self.vert_rects[0])
           break
 
-      if first_pass and dir_changes >= 3:
-        first_pass = False
-      
-      if first_pass:
-        if last_j + 2 >= max_inds[search_dir1]:
-          dir_changes = dir_changes + 1
-        else:
-          last_j = last_j + 2
-      else:
-        dir_changes = dir_changes + 1
-        reset_stored_inds()        
+      # Then check if the larger merged rectangles can be brought in themselves
+      # This first pass will only compare similarly indexed rectangles on the merge coordinate
+            
 
     return list(self.start_cell_full.values())

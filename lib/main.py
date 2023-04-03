@@ -157,7 +157,7 @@ def perform_setup(options):
   #TODO: Adjust these methods for scale being a list instead of just a scalar
   # draw_trial_geo(res, int(dimx), int(dimy), int(dimz), float(scale))
   # dev_draw(res, int(dimx), int(dimy), int(dimz), float(scale), shape, nudge)
-  # dev_draw_decomp(res, int(options.dimx), int(options.dimy), int(options.dimz), float(options.scale), shape)
+  dev_draw_decomp(res, int(options.dimx), int(options.dimy), int(options.dimz), scale, shape)
   
 if __name__ == '__main__':
   main()

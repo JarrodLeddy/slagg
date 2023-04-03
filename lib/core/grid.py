@@ -32,12 +32,14 @@ class Grid:
           new_cell = cell.Cell([i, j, k], self.scale)
 
           # For algorithm testing (and for basic 5x5, or for complex 10x5 + 5x5)
-          # if (i < 5) or (j < 5):
-          #   new_cell.set_geo_cell(True)
+          if (i < 5) or (j < 5):
+            new_cell.set_geo_cell(True)
         
           self.cells.append(new_cell)    
 
+    # Comment the rest of this function out for test case
     # Start by flagging each cell with a vertex in it as a geometry cell
+    """
     brt = BRep_Tool()
     topo = TopologyExplorer(self.shape)
     verts = topo.vertices()
@@ -146,7 +148,7 @@ class Grid:
         if num_vert_cells >= 2:
           for j in range(start_col, end_col + 1):
             self.get_cell(i, j, k).set_geo_cell(True)
-
+     """
   def get_cell(self, i, j, k):
     return self.cells[int(i * int(self.dims[1]) * int(self.dims[2]) + j * int(self.dims[2]) + k)]
     
