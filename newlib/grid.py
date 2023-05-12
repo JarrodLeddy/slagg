@@ -128,27 +128,7 @@ class Grid:
     
     # set geometry flag for every cell that contains a vertex
     if (self.geometry is not None):
-      verts = geometry.get_vertices()
-      for v in verts:
-        self.cells[tuple(self.get_ind_at_pos(v,True))].set_has_geometry(True)
-    
-      # now we need to see which cells have trianges intersect 
-      # them since they contain geometry
-      triangles = geometry.get_triangles()
-      for t in triangles:
-        p1,p2,p3 = [t[0:3],t[3:6],t[6:9]]
-        for c in self.cells.values():
-          #########
-          # first check if plane of triangle intersects cell, if not then we are done
-          # shift cube and triangle such that the cube is centered at 0,0,0
-          shift = c.get_center()
-          p1 -= shift
-          p2 -= shift
-          p3 -= shift
-          c.set_has_geometry(self.geometry.check_intersection(p1,p2,p3,self.dx/2))
-          p1 += shift
-          p2 += shift
-          p3 += shift
+      self.__check_geometry_intersections()
     
   def get_cell(self, inds:tuple):
     return self.cells[tuple(inds)]
@@ -165,7 +145,22 @@ class Grid:
         array(self.numCells)*self.lengths + self.posSlab.lowerBounds
   
   def set_geometry(self, geometry):
+    self.geoemtry = geometry
+    self.__check_geometry_intersections()
     return
+
+  def __check_geometry_intersections(self):
+    # for each triangle, check all cells for an intersection\
+    for t in self.geometry.get_triangles():
+      t0,t1,t2 = [t[0:3],t[3:6],t[6:9]]
+      for c in self.cells.values():
+        # shift everything so that cube is centered on (0,0,0)
+        shift = c.get_center()
+        p0 = t0 - shift
+        p1 = t1 - shift
+        p2 = t2 - shift
+        # print(p0,p1,p2)
+        c.set_has_geometry(self.geometry.check_tricube_intersection(p0,p1,p2,self.dx/2))
   
   def plot(self, axes=None, plot=False, rectangles=False, geometry_only=True):
     if (self.ndims == 3):
@@ -332,7 +327,7 @@ class Geometry:
   def get_triangles(self):
     return self.stl_mesh.points
 
-  def check_intersection(self,v0,v1,v2,h):
+  def check_tricube_intersection(self,v0,v1,v2,h):
     # checks intersection of triangle defined by v0, v1, v2 points
     #   and cube centered at origin with half-side length h
 
@@ -366,6 +361,8 @@ class Geometry:
       return False
     if(min(array([v0[2],v1[2],v2[2]])) > h[2] or max(array([v0[2],v1[2],v2[2]])) < -h[2]):
       return False
+    
+    return True
 
     #######
     # last we check if the line defined by the cross product of a triangle 
@@ -383,7 +380,7 @@ class Geometry:
         vmax[idim] = -h[idim] - v0[idim]
 
     if(dot(normal,vmin)>0.0):
-      return False # err on the side of no
+      return False # err on the side of false
     if(dot(normal,vmax)>=0.0): # not a typo
       return True
     return False
