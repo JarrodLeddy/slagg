@@ -150,7 +150,10 @@ class Grid:
     return
 
   def __check_geometry_intersections(self):
-    # for each triangle, check all cells for an intersection\
+    # for each triangle, check all cells for an intersection
+    logger.info("Checking "+str(self.geometry.get_triangles().shape[0])+\
+        " triangles in geometry for intersection with "+\
+          str(len(self.cells.values()))+" grid cells.\n")
     for t in self.geometry.get_triangles():
       t0,t1,t2 = [t[0:3],t[3:6],t[6:9]]
       for c in self.cells.values():
@@ -159,8 +162,8 @@ class Grid:
         p0 = t0 - shift
         p1 = t1 - shift
         p2 = t2 - shift
-        # print(p0,p1,p2)
-        c.set_has_geometry(self.geometry.check_tricube_intersection(p0,p1,p2,self.dx/2))
+        c.set_has_geometry(c.has_geometry or \
+            self.geometry.check_tricube_intersection(p0,p1,p2,self.dx/2))
   
   def plot(self, axes=None, plot=False, rectangles=False, geometry_only=True):
     if (self.ndims == 3):
@@ -327,19 +330,31 @@ class Geometry:
   def get_triangles(self):
     return self.stl_mesh.points
 
+  def plot(self):
+    from mpl_toolkits.mplot3d import Axes3D
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    import matplotlib.pyplot as plt
+
+    # Create a new plot
+    figure = plt.figure()
+    ax = Axes3D(figure, auto_add_to_figure=False)
+    figure.add_axes(ax)
+    ax.add_collection3d(Poly3DCollection(self.stl_mesh.vectors))
+    scale = self.stl_mesh.points.flatten()
+    ax.auto_scale_xyz(scale, scale, scale)
+    plt.show()
+
   def check_tricube_intersection(self,v0,v1,v2,h):
     # checks intersection of triangle defined by v0, v1, v2 points
     #   and cube centered at origin with half-side length h
-
-    #######
-    # first check is an axis check, 9 separate tests
 
     # get edges of triangles
     e0 = v1-v0 
     e1 = v2-v1
     e2 = v0-v2
 
-    # now do the tests, only return if False, otherwise keep going
+    #######
+    # first check is an axis check, 9 separate tests
     if not self.__axis_test_x01(e0[2],e0[1],abs(e0[2]),abs(e0[1]),v0,v1,v2,h): return False
     if not self.__axis_test_y02(e0[2],e0[0],abs(e0[2]),abs(e0[0]),v0,v1,v2,h): return False
     if not self.__axis_test_z12(e0[1],e0[0],abs(e0[1]),abs(e0[0]),v0,v1,v2,h): return False
@@ -361,8 +376,6 @@ class Geometry:
       return False
     if(min(array([v0[2],v1[2],v2[2]])) > h[2] or max(array([v0[2],v1[2],v2[2]])) < -h[2]):
       return False
-    
-    return True
 
     #######
     # last we check if the line defined by the cross product of a triangle 
@@ -371,13 +384,10 @@ class Geometry:
     vmin = ones(3)
     vmax = ones(3)
 
-    for idim in range (3):
-      if (normal[idim] > 0.0):
-        vmin[idim] = -h[idim] - v0[idim]
-        vmax[idim] =  h[idim] - v0[idim]
-      else:
-        vmin[idim] =  h[idim] - v0[idim]
-        vmax[idim] = -h[idim] - v0[idim]
+    for idim in range(3):
+      sign = 1.0 if (normal[idim] > 0.0) else -1.0
+      vmin[idim] = -sign*h[idim] - v0[idim]
+      vmax[idim] =  sign*h[idim] - v0[idim]
 
     if(dot(normal,vmin)>0.0):
       return False # err on the side of false

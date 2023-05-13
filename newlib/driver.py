@@ -9,6 +9,7 @@ def runTest():
 
   # create geometry
   geom = Geometry('Moon.stl')
+  #geom.plot()
 
   # create grid
   # grid = Grid((10,15,20),(-1.0,-1.0,-1.0),(1.0,2.0,1.0))
