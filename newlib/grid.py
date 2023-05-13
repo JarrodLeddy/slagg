@@ -238,6 +238,10 @@ class Decomp:
     # do regular decomposition
     self.__perform_regular_decomp()
 
+  # def refine(self):
+  #   return
+
+
   def __perform_regular_decomp(self):
     factors = self.__prime_factors(self.nslabs)
     logger.debug(str(self.nslabs)+' slabs broken into prime factors: '+str(factors))
