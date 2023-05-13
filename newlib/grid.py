@@ -1,4 +1,4 @@
-from numpy import array, ndarray, argmax, copy, ones, meshgrid, min, max, floor, append, mgrid, cross, dot
+from numpy import array, ndarray, argmax, copy, ones, meshgrid, min, max, floor, append, mgrid, cross, dot, zeros, sum, flip
 import matplotlib.pyplot as plt
 from stl import mesh
 import logging, sys
@@ -20,6 +20,9 @@ class Slab:
   
   def get_range(self,idim):
     return array([self.lowerBounds[idim],self.upperBounds[idim]])
+  
+  def get_lengths(self):
+    return self.upperBounds - self.lowerBounds
 
 class IndexSlab:
   def __init__(self, nx):
@@ -129,6 +132,7 @@ class Grid:
     # set geometry flag for every cell that contains a vertex
     if (self.geometry is not None):
       self.__check_geometry_intersections()
+      #self.__fill_between_intersections()
     
   def get_cell(self, inds:tuple):
     return self.cells[tuple(inds)]
@@ -147,6 +151,7 @@ class Grid:
   def set_geometry(self, geometry):
     self.geoemtry = geometry
     self.__check_geometry_intersections()
+    self.__fill_between_intersections()
     return
 
   def __check_geometry_intersections(self):
@@ -154,17 +159,49 @@ class Grid:
     logger.info("Checking "+str(self.geometry.get_triangles().shape[0])+\
         " triangles in geometry for intersection with "+\
           str(len(self.cells.values()))+" grid cells.\n")
-    for t in self.geometry.get_triangles():
-      t0,t1,t2 = [t[0:3],t[3:6],t[6:9]]
-      for c in self.cells.values():
+    for c in self.cells.values():
+      shift = c.get_center()
+      for t in self.geometry.get_triangles():
+        t0,t1,t2 = [t[0:3],t[3:6],t[6:9]]
         # shift everything so that cube is centered on (0,0,0)
-        shift = c.get_center()
         p0 = t0 - shift
         p1 = t1 - shift
         p2 = t2 - shift
-        c.set_has_geometry(c.has_geometry or \
-            self.geometry.check_tricube_intersection(p0,p1,p2,self.dx/2))
+
+        if (self.geometry.check_tricube_intersection(p0,p1,p2,self.dx/2)):
+          c.set_has_geometry(True)
+          break
   
+  def __fill_between_intersections(self):
+    # assuming that no geometry is only one cell thick, so we want to fill
+    #   has_geometry flag with True for all cells bewteen other trues
+    for i in range(self.numCells[0]):
+      for j in range(self.numCells[1]):
+        inside = False
+        for k in range(self.numCells[2]):
+          if (self.cells[(i,j,k)].has_geometry):
+            inside = not inside
+          elif (not self.cells[(i,j,k)].has_geometry and inside):
+            self.cells[(i,j,k)].set_has_geometry(True)
+
+    for j in range(self.numCells[1]):
+      for k in range(self.numCells[2]):
+        inside = False
+        for i in range(self.numCells[0]):
+          if (self.cells[(i,j,k)].has_geometry):
+            inside = not inside
+          elif (not self.cells[(i,j,k)].has_geometry and inside):
+            self.cells[(i,j,k)].set_has_geometry(True)
+
+    for k in range(self.numCells[2]):
+      for i in range(self.numCells[0]):
+        inside = False
+        for j in range(self.numCells[1]):
+          if (self.cells[(i,j,k)].has_geometry):
+            inside = not inside
+          elif (not self.cells[(i,j,k)].has_geometry and inside):
+            self.cells[(i,j,k)].set_has_geometry(True)
+
   def plot(self, axes=None, plot=False, rectangles=False, geometry_only=True):
     if (self.ndims == 3):
       if not axes:
@@ -238,9 +275,60 @@ class Decomp:
     # do regular decomposition
     self.__perform_regular_decomp()
 
-  # def refine(self):
-  #   return
+  def refine_empty(self):
+    # remove cells from decomp that have no geometry in them (assuming full row/column)
+    for slab in self.slabs:
+      num_cells = slab.get_lengths()
+      # go through each dimension, get distributions of number of cells with geom
+      has_geometry_slab = zeros(num_cells,dtype=float)
+      for i in (range(num_cells[0])):
+        for j in (range(num_cells[1])):
+          for k in (range(num_cells[2])):
+            if (self.grid.cells[(i+slab.lowerBounds[0],\
+                j+slab.lowerBounds[1],k+slab.lowerBounds[2])].has_geometry):
+              has_geometry_slab[i,j,k] = 1.0
 
+      xdist = sum(has_geometry_slab,axis=(1,2))
+      ydist = sum(has_geometry_slab,axis=(0,2))
+      zdist = sum(has_geometry_slab,axis=(0,1))
+
+      # shorten slabs from left
+      for i,x in enumerate(xdist):
+        if x == 0:
+          slab.lowerBounds[0] += 1
+        else:
+          break
+
+      for i,y in enumerate(ydist):
+        if y == 0:
+          slab.lowerBounds[1] += 1
+        else:
+          break
+
+      for i,z in enumerate(zdist):
+        if z == 0:
+          slab.lowerBounds[2]+= 1
+        else:
+          break
+      
+      # shorten slabs from right
+      for i,x in enumerate(flip(xdist)):
+        if x == 0:
+          slab.upperBounds[0] -= 1
+        else:
+          break
+
+      for i,y in enumerate(flip(ydist)):
+        if y == 0:
+          slab.upperBounds[1] -= 1
+        else:
+          break
+
+      for i,z in enumerate(flip(zdist)):
+        if z == 0:
+          slab.upperBounds[2] -= 1
+        else:
+          break
 
   def __perform_regular_decomp(self):
     factors = self.__prime_factors(self.nslabs)
@@ -334,7 +422,7 @@ class Geometry:
   def get_triangles(self):
     return self.stl_mesh.points
 
-  def plot(self):
+  def plot(self, plot=False):
     from mpl_toolkits.mplot3d import Axes3D
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     import matplotlib.pyplot as plt
@@ -346,7 +434,10 @@ class Geometry:
     ax.add_collection3d(Poly3DCollection(self.stl_mesh.vectors))
     scale = self.stl_mesh.points.flatten()
     ax.auto_scale_xyz(scale, scale, scale)
-    plt.show()
+    if (plot):
+      plt.show()
+    else:
+      return ax
 
   def check_tricube_intersection(self,v0,v1,v2,h):
     # checks intersection of triangle defined by v0, v1, v2 points
