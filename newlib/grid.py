@@ -486,7 +486,19 @@ class Decomp:
             "After initial refinement, " + str(len(self.slabs)) + " slabs remaining."
         )
 
-    def __split_slab(self, slab):
+    def __split_slab(self, slab:Slab) -> list(Slab):
+        """Split single slab into two, biasing the split so that each
+            new slab has roughly the same number of cells with geometry
+            in it. The two new slabs combined cover the exact same region as
+            the initial slab.
+
+        Args:
+            slab (Slab): slab to be split
+
+        Returns:
+            [Slab,Slab]: list of two new slabs that cover the same region as
+            the input slab
+        """
         # split slab so that each new slab has the same number of cells with geometry in it
         #   split along largest direction
         idim = argmax(slab.get_lengths())
@@ -509,9 +521,6 @@ class Decomp:
             sum(has_geometry_slab, axis=((idim + 1) % 3, (idim + 2) % 3))
         )
         idim_dist_cum /= max(idim_dist_cum)
-
-        plt.plot(idim_dist_cum)
-        plt.show()
 
         max_loc = argmax(idim_dist_cum > 0.5)
         if max_loc == slab.get_lengths()[idim]:
