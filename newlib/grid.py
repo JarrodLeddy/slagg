@@ -1,4 +1,4 @@
-from numpy import array, ndarray, argmax, copy, ones, meshgrid, min, max, floor, append, mgrid, cross, dot, zeros, sum, flip
+from numpy import array, ndarray, argmax, copy, ones, meshgrid, min, max, floor, ceil, append, mgrid, cross, dot, zeros, sum, flip, any, product, cumsum
 import matplotlib.pyplot as plt
 from stl import mesh
 import logging, sys
@@ -18,11 +18,27 @@ class Slab:
     self.lowerBounds = array(lb)
     self.upperBounds = array(ub)
   
+  def __repr__(self):
+    return "Slab()"
+
+  def __str__(self):
+    return "Lower Bounds: "+str(self.lowerBounds)+", Upper Bounds: "+str(self.upperBounds)
+  
   def get_range(self,idim):
     return array([self.lowerBounds[idim],self.upperBounds[idim]])
   
   def get_lengths(self):
     return self.upperBounds - self.lowerBounds
+  
+  def is_empty(self):
+    return any(self.get_lengths() <= 0)
+  
+  def get_volume(self):
+    return product(self.get_lengths())
+  
+  def set_empty(self):
+    self.lowerBounds = array([0, 0, 0])
+    self.upperBounds = array([0, 0, 0])
 
 class IndexSlab:
   def __init__(self, nx):
@@ -65,7 +81,6 @@ class Grid:
 
   def __init__(self, numCells:tuple, startPos=None, endPos=None, geometry=None):
 
-    self.numCells = array(numCells)
     self.ndims = len(numCells)
 
     # check if geometry defined, if not then endPos and startPos must be
@@ -100,18 +115,27 @@ class Grid:
       logger.info("start positions:  "+str(startPos))
       logger.info("end positions:    "+str(endPos)+"\n")
 
+    if (numCells[-1] == None):
+      maxCells = numCells[0]
+      numCells = zeros(3,dtype=int)
+      maxind = argmax(lengths)
+      numCells[maxind] = maxCells
+      for i in range(3):
+        if (i != maxind):
+          numCells[i] = int(maxCells*lengths[i]/lengths[maxind])
+
     else:
       if (len(numCells) != len(startPos) or \
           len(numCells) != len(endPos) or \
           len(startPos) != len(endPos)):
         raise(Exception("SLAGG Grid error: specified grid dimensionality not consistent in startPos, endPos, and numCells"))
 
-    self.dx = (array(endPos)-array(startPos)) / array(numCells)
-    self.slab = Slab(array([0 for i in self.numCells]),array(numCells))
+    self.numCells = array(numCells)
+    self.dx = (array(endPos)-array(startPos)) / array(self.numCells)
+    self.slab = Slab(array([0 for i in self.numCells]),array(self.numCells))
     self.posSlab = Slab(array(startPos),array(endPos))
     self.lengths = array(endPos)-array(startPos)
-
-    logger.info("Initializing Grid with "+str(numCells)+" cells")
+    logger.info("Initializing Grid with "+str(self.numCells)+" cells")
 
     # generate set of cells
     if (self.ndims == 1):
@@ -155,7 +179,8 @@ class Grid:
     return
 
   def __check_geometry_intersections(self):
-    # for each triangle, check all cells for an intersection
+    # Algorithm based on Fast 3D Triangle-Box Overlap Testing by Tomas Akenine-Moller
+    # For each triangle, check all cells for an intersection
     logger.info("Checking "+str(self.geometry.get_triangles().shape[0])+\
         " triangles in geometry for intersection with "+\
           str(len(self.cells.values()))+" grid cells.\n")
@@ -275,7 +300,25 @@ class Decomp:
     # do regular decomposition
     self.__perform_regular_decomp()
 
-  def refine_empty(self):
+  def refine_empty(self,refill_empty=True):
+    self.__squeeze_empty()
+
+    if (refill_empty):
+      # if num slabs is less than desired, split largest slabs until 
+      #   we have the right number again
+      while (len(self.slabs) < self.nslabs):
+        slab_vols = [slab.get_volume() for slab in self.slabs]
+        logger.debug("Splitting slab: "+str(self.slabs[argmax(slab_vols)]))
+        s1,s2 = self.__split_slab(self.slabs[argmax(slab_vols)])
+        logger.debug("Slab split into two: "+str(s1)+"  "+str(s2))
+        self.slabs[argmax(slab_vols)] = s1
+        self.slabs.append(s2)
+      
+      logger.info("Largest slabs split to create "+str(len(self.slabs))+" total slabs.")
+
+      self.__squeeze_empty()
+
+  def __squeeze_empty(self):
     # remove cells from decomp that have no geometry in them (assuming full row/column)
     for slab in self.slabs:
       num_cells = slab.get_lengths()
@@ -292,45 +335,90 @@ class Decomp:
       ydist = sum(has_geometry_slab,axis=(0,2))
       zdist = sum(has_geometry_slab,axis=(0,1))
 
-      # shorten slabs from left
-      for i,x in enumerate(xdist):
-        if x == 0:
-          slab.lowerBounds[0] += 1
-        else:
-          break
+      if (sum(xdist) == 0):
+        slab.set_empty()
+      else:
+        # shorten sla bs from left
+        for i,x in enumerate(xdist):
+          if x == 0:
+            slab.lowerBounds[0] += 1
+          else:
+            break
 
-      for i,y in enumerate(ydist):
-        if y == 0:
-          slab.lowerBounds[1] += 1
-        else:
-          break
+        for i,y in enumerate(ydist):
+          if y == 0:
+            slab.lowerBounds[1] += 1
+          else:
+            break
 
-      for i,z in enumerate(zdist):
-        if z == 0:
-          slab.lowerBounds[2]+= 1
-        else:
-          break
-      
-      # shorten slabs from right
-      for i,x in enumerate(flip(xdist)):
-        if x == 0:
-          slab.upperBounds[0] -= 1
-        else:
-          break
+        for i,z in enumerate(zdist):
+          if z == 0:
+            slab.lowerBounds[2]+= 1
+          else:
+            break
+        
+        # shorten slabs from right
+        for i,x in enumerate(flip(xdist)):
+          if x == 0:
+            slab.upperBounds[0] -= 1
+          else:
+            break
 
-      for i,y in enumerate(flip(ydist)):
-        if y == 0:
-          slab.upperBounds[1] -= 1
-        else:
-          break
+        for i,y in enumerate(flip(ydist)):
+          if y == 0:
+            slab.upperBounds[1] -= 1
+          else:
+            break
 
-      for i,z in enumerate(flip(zdist)):
-        if z == 0:
-          slab.upperBounds[2] -= 1
-        else:
-          break
+        for i,z in enumerate(flip(zdist)):
+          if z == 0:
+            slab.upperBounds[2] -= 1
+          else:
+            break
+
+    # remove any empty slabs
+    self.slabs = [slab for slab in self.slabs if not slab.is_empty()]
+
+    logger.info("After initial refinement, "+str(len(self.slabs))+" slabs remaining.")
+
+  def __split_slab(self,slab):
+    # split slab so that each new slab has the same number of cells with geometry in it
+    #   split along largest direction
+    idim = argmax(slab.get_lengths())
+    num_cells = slab.get_lengths()
+    # go through each dimension, get distributions of number of cells with geom
+    has_geometry_slab = zeros(num_cells,dtype=float)
+    for i in (range(num_cells[0])):
+      for j in (range(num_cells[1])):
+        for k in (range(num_cells[2])):
+          if (self.grid.cells[(i+slab.lowerBounds[0],\
+              j+slab.lowerBounds[1],k+slab.lowerBounds[2])].has_geometry):
+            has_geometry_slab[i,j,k] = 1.0
+
+    idim_dist_cum = cumsum(sum( has_geometry_slab, axis=((idim+1)%3,(idim+2)%3) ))
+    idim_dist_cum /= max(idim_dist_cum)
+
+    plt.plot(idim_dist_cum)
+    plt.show()
+
+    max_loc = argmax(idim_dist_cum > 0.5)
+    if (max_loc == slab.get_lengths()[idim]):
+      split_loc = slab.upperBounds[idim]-1
+    elif (max_loc == 0):
+      split_loc = slab.lowerBounds[idim]+1
+    else:
+      split_loc = max_loc + slab.lowerBounds[idim]
+
+    new_upper_bounds = copy(slab.upperBounds)
+    new_upper_bounds[idim] = split_loc
+    new_lower_bounds = copy(slab.lowerBounds)
+    new_lower_bounds[idim] = split_loc
+
+    return [Slab(slab.lowerBounds,new_upper_bounds),Slab(new_lower_bounds,slab.upperBounds)]
+
 
   def __perform_regular_decomp(self):
+    self.slabs = []
     factors = self.__prime_factors(self.nslabs)
     logger.debug(str(self.nslabs)+' slabs broken into prime factors: '+str(factors))
 
@@ -340,6 +428,9 @@ class Decomp:
       ind = argmax(domain_size)
       domain_size[ind] /= f
       num_domains[ind] *= f
+
+    logger.debug("domain_size = "+str(domain_size))
+    logger.debug("num_domains = "+str(num_domains))
 
     self.coord_map = IndexSlab(num_domains)
     for islab in range(self.nslabs):

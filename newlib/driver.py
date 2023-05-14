@@ -8,23 +8,27 @@ def runTest():
   ep = [1.0,1.0,1.0]
 
   # create geometry
-  geom_name = "Torus" # Moon
+  geometry_names = ["coupler_reduced", "Moon", "Torus_reduced", "C100exportFlipped"]
+  geom_name = geometry_names[0]
   geom = Geometry(geom_name+'.stl')
-  #geom.plot()
+  ax = geom.plot(plot=False)
 
   # create grid
   # grid = Grid((10,15,20),(-1.0,-1.0,-1.0),(1.0,2.0,1.0))
   if (geom_name == "Moon"):
     grid = Grid((17,4,30), geometry=geom) # with moon
-  elif (geom_name == "Torus"):
-    grid = Grid((20,20,7), geometry=geom)
-  ax = grid.plot(plot=False)
+  elif (geom_name == "Torus_reduced"):
+    grid = Grid((35,35,15), geometry=geom)
+  elif (geom_name == "C100exportFlipped"):
+    grid = Grid((15,10,50), geometry=geom)
+  elif (geom_name == "coupler_reduced"):
+    grid = Grid((40,None,None), geometry=geom)
 
-  decomp = Decomp(grid,12)
+  decomp = Decomp(grid,64)
   decomp.plot(axes=ax, plot=True)
 
   # refine and plot
-  decomp.refine_empty()
+  decomp.refine_empty(refill_empty=True)
   ax = geom.plot(plot=False)
   decomp.plot(axes=ax, plot=True)
 
