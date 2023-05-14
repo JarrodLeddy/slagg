@@ -385,6 +385,16 @@ class Decomp:
         self.__perform_regular_decomp()
 
     def refine_empty(self, refill_empty=True):
+        """Refines the decomp by removing cells empty of geometry. 
+        Optionally will generate more slabs if any slabs are reduced 
+        to zero volume
+
+        Args:
+            refill_empty (bool, optional): Option to generate more slabs 
+            if some were reduced to zero volume as to keep the total 
+            number of slabs before and after refinement the same. 
+            Defaults to True.
+        """
         self.__squeeze_empty()
 
         if refill_empty:
