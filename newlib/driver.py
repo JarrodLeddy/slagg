@@ -9,10 +9,9 @@ def runTest():
     ep = [1.0, 1.0, 1.0]
 
     # create geometry
-    geometry_names = ["coupler_reduced", "Moon", "Torus_reduced", "C100exportFlipped"]
+    geometry_names = ["coupler_reduced", "Moon", "Torus_reduced", "C100_reduced"]
     geom_name = geometry_names[0]
     geom = Geometry(geom_name + ".stl")
-    ax = geom.plot(plot=False)
 
     # create grid
     # grid = Grid((10,15,20),(-1.0,-1.0,-1.0),(1.0,2.0,1.0))
@@ -20,12 +19,13 @@ def runTest():
         grid = Grid((17, 4, 30), geometry=geom)  # with moon
     elif geom_name == "Torus_reduced":
         grid = Grid((35, 35, 15), geometry=geom)
-    elif geom_name == "C100exportFlipped":
+    elif geom_name == "C100_reduced":
         grid = Grid((15, 10, 50), geometry=geom)
     elif geom_name == "coupler_reduced":
         grid = Grid((40, None, None), geometry=geom)
 
-    decomp = Decomp(grid, 64)
+    decomp = Decomp(grid, 32)
+    ax = geom.plot(plot=False)
     decomp.plot(axes=ax, plot=True)
 
     # refine and plot
