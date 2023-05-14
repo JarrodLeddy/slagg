@@ -37,7 +37,15 @@ requests_logger.addHandler(handler)
 
 
 class Slab:
+    """Class that defines a slab based on lower and upper bounds. Can be any-dimensional."""
+
     def __init__(self, lb: ndarray, ub: ndarray):
+        """_summary_
+
+        Args:
+            lb (ndarray): lower bounds of slab [x0,y0,...]
+            ub (ndarray): upper bounds of slab [x1,y1,...]
+        """
         self.lowerBounds = array(lb)
         self.upperBounds = array(ub)
 
@@ -45,36 +53,73 @@ class Slab:
         return "Slab()"
 
     def __str__(self):
-        return (
-            "Lower Bounds: "
-            + str(self.lowerBounds)
-            + ", Upper Bounds: "
-            + str(self.upperBounds)
-        )
+        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds)
 
-    def get_range(self, idim):
+    def get_range(self, idim: int) -> ndarray:
+        """Get the range of a particular dimension of the slab
+
+        Args:
+            idim (int): dimension for which the bounds are desired
+
+        Returns:
+            ndarray: upper and lower bounds of the requested dimension
+        """
         return array([self.lowerBounds[idim], self.upperBounds[idim]])
 
-    def get_lengths(self):
+    def get_lengths(self) -> ndarray:
+        """Get the lengths of the slab in each dimension
+
+        Returns:
+            ndarray: array of the lengths of the slab
+        """
         return self.upperBounds - self.lowerBounds
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
+        """Get flag for whether slab is empty or not. A slab is considered empty
+        if any of its dimensional lengths are zero or less
+
+        Returns:
+            bool: flag for whether the slab is empty or not
+        """
         return any(self.get_lengths() <= 0)
 
-    def get_volume(self):
+    def get_volume(self) -> float:
+        """Get the volume of the slab (ie. the product of its lengths)
+
+        Returns:
+            float: volume of the slab
+        """
         return product(self.get_lengths())
 
-    def set_empty(self):
+    def set_empty(self) -> None:
+        """Set the slab to be empty"""
         self.lowerBounds = array([0, 0, 0])
         self.upperBounds = array([0, 0, 0])
 
 
 class IndexSlab:
-    def __init__(self, nx):
+    """Class that creates a slab of indices and allows for each conversion between
+    linear and vector indices.
+    """
+
+    def __init__(self, nx: ndarray) -> None:
+        """Initialize the IndexSlab
+
+        Args:
+            nx (ndarray): list of the lengths of each dimension
+        """
         self.nx = array(nx)
         self.ndim = len(nx)
 
-    def getIndices(self, linInd):
+    def getIndices(self, linInd: int) -> ndarray[int]:
+        """Get the vector indices for the specified linear index
+
+        Args:
+            linInd (int): linear index
+
+        Returns:
+            ndarray[int]: array of the vector indices
+        """
         if self.ndim == 1:
             return array([linInd])
         elif self.ndim == 2:
@@ -87,19 +132,51 @@ class IndexSlab:
 
 
 class Cell:
+    """Class for storing a cell (box) for simulation. Holds a slab of indices, a position
+    corresponding to the bottom left corner of the box, the edge length of the box
+    (assumed cubic), and a flag for whether the cell has any geometry in it.
+    """
+
     has_geometry = False
 
-    def __init__(self, inds: ndarray, pos: ndarray, dx, contains_geometry=False):
+    def __init__(
+        self,
+        inds: ndarray[int],
+        pos: ndarray[float],
+        dx: float,
+        contains_geometry=False,
+    ):
+        """Initialize a Cell object
+
+        Args:
+            inds (ndarray[int]): vector index for the box location
+            pos (ndarray[float]): vector of physical position of the box location (lower left corner)
+            dx (float): edge length of the box
+            contains_geometry (bool, optional): whether the box is inside some geometry. Defaults to False.
+        """
         self.position = array(pos)
         self.indices = array(inds)
         self.slab = Slab(self.indices, self.indices + 1)
         self.dx = dx
         self.has_geometry = contains_geometry
 
-    def set_has_geometry(self, hgb):
+    def set_has_geometry(self, hgb: bool) -> None:
+        """Sets the internal flag for the cell for whether or not it is inside
+        a geometry object
+
+        Args:
+            hgb (bool): state to set. True it is inside geometry; False
+            it is outside geometry
+        """
         self.has_geometry = hgb
 
-    def get_center(self):
+    def get_center(self) -> ndarray[float]:
+        """Get the location of the center of the cell (cell.position is the location
+        of the lower left corner)
+
+        Returns:
+            ndarray[float]: The position of the center of the cell
+        """
         return self.position + 0.5 * self.dx
 
 
@@ -385,14 +462,14 @@ class Decomp:
         self.__perform_regular_decomp()
 
     def refine_empty(self, refill_empty=True):
-        """Refines the decomp by removing cells empty of geometry. 
-        Optionally will generate more slabs if any slabs are reduced 
+        """Refines the decomp by removing cells empty of geometry.
+        Optionally will generate more slabs if any slabs are reduced
         to zero volume
 
         Args:
-            refill_empty (bool, optional): Option to generate more slabs 
-            if some were reduced to zero volume as to keep the total 
-            number of slabs before and after refinement the same. 
+            refill_empty (bool, optional): Option to generate more slabs
+            if some were reduced to zero volume as to keep the total
+            number of slabs before and after refinement the same.
             Defaults to True.
         """
         self.__squeeze_empty()
@@ -486,7 +563,7 @@ class Decomp:
             "After initial refinement, " + str(len(self.slabs)) + " slabs remaining."
         )
 
-    def __split_slab(self, slab:Slab) -> list(Slab):
+    def __split_slab(self, slab: Slab) -> list:
         """Split single slab into two, biasing the split so that each
             new slab has roughly the same number of cells with geometry
             in it. The two new slabs combined cover the exact same region as
