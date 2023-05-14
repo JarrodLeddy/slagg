@@ -459,7 +459,10 @@ class Decomp:
         self.grid = grid
 
         # do regular decomposition
-        self.__perform_regular_decomp()
+        if (self.grid.geometry is None):
+            self.__perform_regular_decomp()
+        else:
+            self.__perform_geometry_biased_decomp()
 
     def refine_empty(self, refill_empty=True):
         """Refines the decomp by removing cells empty of geometry.
@@ -651,6 +654,75 @@ class Decomp:
             logger.debug(
                 "lb: " + str(slab.lowerBounds) + ", ub: " + str(slab.upperBounds)
             )
+
+    def __perform_geometry_biased_decomp(self):
+        # reset slabs, get factors
+        self.slabs = []
+        factors = self.__prime_factors(self.nslabs)
+        logger.debug(
+            str(self.nslabs) + " slabs broken into prime factors: " + str(factors)
+        )
+
+        # construct int array of entire domain for whether cells have geometry or not
+        has_geometry_domain = zeros(self.grid.numCells, dtype=int)
+        for i in range(self.grid.numCells[0]):
+            for j in range(self.grid.numCells[1]):
+                for k in range(self.grid.numCells[2]):
+                    if self.grid.cells[(i,j,k)].has_geometry:
+                        has_geometry_domain[i, j, k] = 1
+
+        # determine how to slice
+        domain_size = copy(self.grid.numCells)
+        num_domains = ones(self.grid.ndims,dtype=int)
+        for f in factors:
+            ind = argmax(domain_size)
+            domain_size[ind] /= f
+            num_domains[ind] *= f
+
+        logger.debug("GeometryBiasedDecomp: domain_size = " + str(domain_size))
+        logger.debug("GeometryBiasedDecomp: num_domains = " + str(num_domains))
+
+        # get slices based on geometry
+        domain_edges = [zeros(nd+1) for nd in num_domains]
+        for idim in range(3):
+            # get cumulative sum along idim axis for num cells with geom
+            idim_dist_cum = array(cumsum(
+                sum(has_geometry_domain, axis=((idim + 1) % 3, (idim + 2) % 3))
+            ),dtype=float)
+            idim_dist_cum /= max(idim_dist_cum)
+            frac = 1./num_domains[idim]
+            for islice in array(range(num_domains[idim]))+1:
+                domain_edges[idim][islice] = argmax(idim_dist_cum >= islice*frac)
+            domain_edges[idim][-1] += 1
+
+        # generate slabs
+        self.coord_map = IndexSlab(num_domains)
+        for islab in range(self.nslabs):
+            coords = self.coord_map.getIndices(islab)
+            lb = ones(self.grid.ndims, dtype=int)
+            ub = ones(self.grid.ndims, dtype=int)
+            for idim in range(self.grid.ndims):
+                lb[idim] = domain_edges[idim][coords[idim]]
+                ub[idim] = domain_edges[idim][coords[idim]+1]
+            self.slabs.append(Slab(lb, ub))
+
+        logger.debug("Domain decomposed into slabs:")
+        for slab in self.slabs:
+            logger.debug(
+                "lb: " + str(slab.lowerBounds) + ", ub: " + str(slab.upperBounds)
+            )
+    
+    def __merge_with_nearest_smallest_neighbor(self,slab:Slab) -> None:
+        """Merge slab with its nearest, smallest neighbor
+
+        Args:
+            slab (Slab): slab to merge
+        """
+        # need to find nearest neighbors, then find the smallest one and merge, then
+        #  refine grid again
+        
+        return
+
 
     def plot(self, axes=None, plot=False, by_index=False):
         if self.grid.ndims == 3:
