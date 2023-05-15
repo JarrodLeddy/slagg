@@ -10,7 +10,7 @@ def runTest():
 
     # create geometry
     geometry_names = ["coupler_reduced", "Moon", "Torus_reduced", "C100_reduced"]
-    geom_name = geometry_names[0]
+    geom_name = geometry_names[1]
     geom = Geometry(geom_name + ".stl")
 
     # create grid
@@ -30,6 +30,11 @@ def runTest():
 
     # refine and plot
     decomp.refine_empty(refill_empty=True)
+    ax = geom.plot(plot=False)
+    decomp.plot(axes=ax, plot=True)
+
+    # try to merge any very small slabs
+    decomp.refine_small()
     ax = geom.plot(plot=False)
     decomp.plot(axes=ax, plot=True)
 
