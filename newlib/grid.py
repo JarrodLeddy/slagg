@@ -524,20 +524,122 @@ class Decomp:
     slabs = []
     nslabs = 1 # desired number of slabs, not always equal to len(slabs)
 
-    def __init__(self, grid, nslabs):
+    def __init__(self, grid, nslabs, geometry_biased=True):
         self.nslabs = nslabs
         self.grid = grid
 
         # do regular decomposition
-        if (self.grid.geometry is None):
-            self.__perform_regular_decomp()
-        else:
+        self.__perform_regular_decomp()
+        
+        # save for diagnostics later
+        self.initial_volumes = array([i.get_volume() for i in self.slabs])
+        self.initial_volume = sum(self.initial_volumes)
+        self.__initial_geometry_diagnostics()
+
+        # now do geometry-biased decomp (should be a better starting point)
+        if (geometry_biased):
             self.__perform_geometry_biased_decomp()
     
-    def diagnostics(self):
-        
+    def diagnostics(self, plot=False):
+        # first lets look at the overall gain in memory allocation
+        volumes = array([i.get_volume() for i in self.slabs])
+        total_volume = sum(volumes)
+        logger.info("\n ========== Summary ==========\n")
+        logger.info("-- Memory --")
+        logger.info(f"Initial domain volume: {self.initial_volume}")
+        logger.info(f"Final domain volume: {total_volume}")
+        logger.info(f"Results in {total_volume/self.initial_volume*100:.1f}% memory usage.\n")
 
+        # get info about cells with geometry in the slab
+        slab_geom_volume = zeros(len(self.slabs))
+        for islab,slab in enumerate(self.slabs):
+            num_cells = slab.get_lengths()
+            # go through each dimension, get distributions of number of cells with geom
+            has_geometry_slab = zeros(num_cells, dtype=float)
+            for i in range(num_cells[0]):
+                for j in range(num_cells[1]):
+                    for k in range(num_cells[2]):
+                        if self.grid.cells[
+                            (
+                                i + slab.lowerBounds[0],
+                                j + slab.lowerBounds[1],
+                                k + slab.lowerBounds[2],
+                            )
+                        ].has_geometry:
+                            has_geometry_slab[i, j, k] = 1.0
+            slab_geom_volume[islab] = sum(has_geometry_slab)
+
+        logger.info(f"\n-- Efficiency --")
+        logger.info(f"Before Refinement:")
+        logger.info(f"{self.nslabs} total domains")
+        logger.info(f"Average {mean(self.initial_volumes):.1f} cells per domain")
+        logger.info(f"Average {mean(self.initial_slab_geom_volume):.1f} cells per domain containing geometry")
+        logger.info(f"Largest slab has {max(self.initial_slab_geom_volume)} cells containing geometry")
+        logger.info(f"{std(self.initial_slab_geom_volume):.1f} standard deviation of cells per domain containing geometry")
+
+        logger.info(f"\nAfter Refinement:")
+        logger.info(f"{len(self.slabs)} total domains")
+        logger.info(f"Average {mean(volumes):.1f} cells per domain")
+        logger.info(f"Average {mean(slab_geom_volume):.1f} cells per domain containing geometry")
+        logger.info(f"Largest slab has {max(slab_geom_volume)} cells containing geometry")
+        logger.info(f"{std(slab_geom_volume):.1f} standard deviation of cells per domain containing geometry")
+
+        if (plot):
+            # get histogram data
+            vrange = (min(array([self.initial_volumes,volumes])),max(array([self.initial_volumes,volumes])))
+            gvrange =(min(array([self.initial_slab_geom_volume,slab_geom_volume])),max(array([self.initial_slab_geom_volume,slab_geom_volume])))
+            pad = 5
+            hist_resolution = 3
+
+            fig = plt.figure(figsize=(10,8))
+            # before refinement
+            ax = fig.add_subplot(221)
+            ax.hist(self.initial_volumes, bins=self.nslabs//hist_resolution, range=vrange, edgecolor = "black")
+            ax.set_xlabel('cells per domain')
+            ax.set_ylabel('number of domains')
+
+            ax.annotate("Total Cells", xy=(0.5, 1), xytext=(0, pad),
+                xycoords='axes fraction', textcoords='offset points',
+                size='large', ha='center', va='baseline')
+            
+            ax.annotate("Basic\nDecomp", xy=(0, 0.5), xytext=(-ax.yaxis.labelpad - pad, 0),
+                xycoords=ax.yaxis.label, textcoords='offset points',
+                size='large', ha='right', va='center')
+
+            ax = fig.add_subplot(222)
+            ax.hist(self.initial_slab_geom_volume, bins=self.nslabs//hist_resolution, range=gvrange, edgecolor = "black")
+            ax.set_xlabel('cells with geometry per domain')
+            ax.set_ylabel('number of domains')
+
+            ax.annotate("Cells With Geometry", xy=(0.5, 1), xytext=(0, pad),
+                xycoords='axes fraction', textcoords='offset points',
+                size='large', ha='center', va='baseline')
+
+            # after refinement
+            ax = fig.add_subplot(223)
+            ax.hist(volumes, bins=self.nslabs//hist_resolution, range=vrange, edgecolor = "black")
+            ax.set_xlabel('cells per domain')
+            ax.set_ylabel('number of domains')
+
+            ax.annotate("Refined\nDecomp", xy=(0, 0.5), xytext=(-ax.yaxis.labelpad - pad, 0),
+                xycoords=ax.yaxis.label, textcoords='offset points',
+                size='large', ha='right', va='center')
+
+            ax = fig.add_subplot(224)
+            ax.hist(slab_geom_volume, bins=self.nslabs//hist_resolution, range=gvrange, edgecolor = "black")
+            ax.set_xlabel('cells with geometry per domain')
+            ax.set_ylabel('number of domains')
+            
+            # display
+            fig.tight_layout()
+            fig.subplots_adjust(left=0.15, top=0.95)
+            plt.show()
     
+    def refine(self) -> None:
+        self.refine_empty()
+        self.refine_small()
+        self.diagnostics()
+
     def refine_small(self) -> None:
         """Checks for outlyingly small slabs and attempts to merge them with neighbors
         """
@@ -571,8 +673,10 @@ class Decomp:
         self.__squeeze_empty()
 
         if refill_empty:
-            self.__refill_empty_slabs()
-            self.__squeeze_empty()
+            # shoudl always be possible to split slabs, so this should never be infinite
+            while(self.nslabs != len(self.slabs)):
+                self.__refill_empty_slabs()
+                self.__squeeze_empty()
 
         return
     
@@ -851,6 +955,26 @@ class Decomp:
                 slab.set_empty()
                 return True
         return False
+    
+    def __initial_geometry_diagnostics(self) -> None:
+        self.initial_slab_geom_volume = zeros(len(self.slabs))
+        for islab,slab in enumerate(self.slabs):
+            num_cells = slab.get_lengths()
+            # go through each dimension, get distributions of number of cells with geom
+            has_geometry_slab = zeros(num_cells, dtype=float)
+            for i in range(num_cells[0]):
+                for j in range(num_cells[1]):
+                    for k in range(num_cells[2]):
+                        if self.grid.cells[
+                            (
+                                i + slab.lowerBounds[0],
+                                j + slab.lowerBounds[1],
+                                k + slab.lowerBounds[2],
+                            )
+                        ].has_geometry:
+                            has_geometry_slab[i, j, k] = 1.0
+            self.initial_slab_geom_volume[islab] = sum(has_geometry_slab)
+        return
 
     def plot(self, axes=None, plot=False, by_index=False):
         if self.grid.ndims == 3:
