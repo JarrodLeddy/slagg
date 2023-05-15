@@ -1,3 +1,4 @@
+from __future__ import annotations
 from numpy import (
     array,
     ndarray,
@@ -19,6 +20,10 @@ from numpy import (
     any,
     product,
     cumsum,
+    argsort,
+    all,
+    mean,
+    std,
 )
 import matplotlib.pyplot as plt
 from stl import mesh
@@ -48,12 +53,25 @@ class Slab:
         """
         self.lowerBounds = array(lb)
         self.upperBounds = array(ub)
+        self.ndim = self.lowerBounds.size
 
     def __repr__(self):
-        return "Slab()"
+        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds) + "\n"
 
     def __str__(self):
-        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds)
+        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds) + "\n"
+    
+    def __eq__(self, other_slab:Slab) -> bool:
+        """Check if slabs are identical
+
+        Args:
+            other_slab (Slab): Slab to compare
+
+        Returns:
+            bool: whether slabs are equal
+        """
+        return (all(self.lowerBounds == other_slab.lowerBounds)) and \
+          (all(self.upperBounds == other_slab.upperBounds))
 
     def get_range(self, idim: int) -> ndarray:
         """Get the range of a particular dimension of the slab
@@ -96,6 +114,58 @@ class Slab:
         self.lowerBounds = array([0, 0, 0])
         self.upperBounds = array([0, 0, 0])
 
+    def neighbors(self,check_slab:Slab) -> bool:
+        """Determine whether this slab and the provided one are neighbors (ie. do their edges touch)
+
+        Args:
+            check_slab (Slab): slab to check for neighborhood
+
+        Returns:
+            bool: whether the slabs are neighbors or not
+        """
+        union_length = self.union(check_slab).get_lengths()
+        total_length = self.get_lengths() + check_slab.get_lengths()
+        if (any(union_length > total_length)): 
+            return False
+        return True
+    
+    def overlaps(self,check_slab:Slab) -> bool:
+        """Check whether this slab overlaps the provided slab
+
+        Args:
+            slab (Slab): slab to check overlap with
+
+        Returns:
+            bool: whether slabs overlap or not
+        """
+        intersection = self.intersection(check_slab)
+        if (intersection.get_volume() > 0):
+            return True
+        return False
+    
+    def union(self, check_slab:Slab) -> Slab:
+        """Get the smallest slab that contains both this slab and the provided one
+
+        Args:
+            check_slab (Slab): slab to union with
+
+        Returns:
+            Slab: minimal slab containing both this slab and provided slab
+        """
+        return Slab(min(array([self.lowerBounds, check_slab.lowerBounds]),axis=0),\
+            max(array([self.upperBounds, check_slab.upperBounds]),axis=0))
+    
+    def intersection(self, check_slab:Slab) -> Slab:
+        """Get the largest region contained by this slab and the provided slab
+
+        Args:
+            check_slab (Slab): slab to check intersection with
+
+        Returns:
+            Slab: maximum slab contained by both this and provided slab
+        """
+        return Slab(max(array([self.lowerBounds, check_slab.lowerBounds]),axis=0),\
+            min(array([self.upperBounds, check_slab.upperBounds]),axis=0))
 
 class IndexSlab:
     """Class that creates a slab of indices and allows for each conversion between
@@ -452,7 +522,7 @@ class Grid:
 
 class Decomp:
     slabs = []
-    nslabs = 1
+    nslabs = 1 # desired number of slabs, not always equal to len(slabs)
 
     def __init__(self, grid, nslabs):
         self.nslabs = nslabs
@@ -463,8 +533,31 @@ class Decomp:
             self.__perform_regular_decomp()
         else:
             self.__perform_geometry_biased_decomp()
+    
+    def diagnostics(self):
+        
 
-    def refine_empty(self, refill_empty=True):
+    
+    def refine_small(self) -> None:
+        """Checks for outlyingly small slabs and attempts to merge them with neighbors
+        """
+        # check if volume is more than 2 standard deviations from the average volume
+        #  and if so try to merge with neighbor
+        vols = array([islb.get_volume() for islb in self.slabs])
+        stdvol = std(vols)
+        avgvol = mean(vols)
+        for slb in self.slabs:
+            if (slb.get_volume() < avgvol-2*stdvol):
+                logger.info(str(slb)+" is %.2f" % ((avgvol-slb.get_volume())/stdvol)+" standard deviations below the average volume. Attempting to merge with neighbor.")
+                merged = self.__merge_with_nearest_smallest_neighbor(slb)
+                if (merged):
+                    self.refine_empty()
+                    logger.info("Merged successfully")
+                else:
+                    logger.info("Merge failed")
+        return
+
+    def refine_empty(self, refill_empty=True) -> None:
         """Refines the decomp by removing cells empty of geometry.
         Optionally will generate more slabs if any slabs are reduced
         to zero volume
@@ -478,25 +571,30 @@ class Decomp:
         self.__squeeze_empty()
 
         if refill_empty:
-            # if num slabs is less than desired, split largest slabs until
-            #   we have the right number again
-            while len(self.slabs) < self.nslabs:
-                slab_vols = [slab.get_volume() for slab in self.slabs]
-                logger.debug("Splitting slab: " + str(self.slabs[argmax(slab_vols)]))
-                s1, s2 = self.__split_slab(self.slabs[argmax(slab_vols)])
-                logger.debug("Slab split into two: " + str(s1) + "  " + str(s2))
-                self.slabs[argmax(slab_vols)] = s1
-                self.slabs.append(s2)
-
-            logger.info(
-                "Largest slabs split to create "
-                + str(len(self.slabs))
-                + " total slabs."
-            )
-
+            self.__refill_empty_slabs()
             self.__squeeze_empty()
 
-    def __squeeze_empty(self):
+        return
+    
+    def __refill_empty_slabs(self) -> None:
+        # if num slabs is less than desired, split largest slabs until
+        #   we have the right number again
+        while len(self.slabs) < self.nslabs:
+            slab_vols = [slab.get_volume() for slab in self.slabs]
+            logger.debug("Splitting slab: " + str(self.slabs[argmax(slab_vols)]))
+            s1, s2 = self.__split_slab(self.slabs[argmax(slab_vols)])
+            logger.debug("Slab split into two: " + str(s1) + "  " + str(s2))
+            self.slabs[argmax(slab_vols)] = s1
+            self.slabs.append(s2)
+
+        logger.info(
+            "Largest slabs split to create "
+            + str(len(self.slabs))
+            + " total slabs."
+        )
+        return
+
+    def __squeeze_empty(self) -> None:
         # remove cells from decomp that have no geometry in them (assuming full row/column)
         for slab in self.slabs:
             num_cells = slab.get_lengths()
@@ -563,8 +661,9 @@ class Decomp:
         self.slabs = [slab for slab in self.slabs if not slab.is_empty()]
 
         logger.info(
-            "After initial refinement, " + str(len(self.slabs)) + " slabs remaining."
+            "After initial refinement, " + str(len(self.slabs)) + " slabs remaining.\n"
         )
+        return
 
     def __split_slab(self, slab: Slab) -> list:
         """Split single slab into two, biasing the split so that each
@@ -712,17 +811,46 @@ class Decomp:
                 "lb: " + str(slab.lowerBounds) + ", ub: " + str(slab.upperBounds)
             )
     
-    def __merge_with_nearest_smallest_neighbor(self,slab:Slab) -> None:
+    def __merge_with_nearest_smallest_neighbor(self,slab:Slab) -> bool:
         """Merge slab with its nearest, smallest neighbor
 
         Args:
             slab (Slab): slab to merge
+        
+        Returns:
+            (bool): whether a merge occurred or not
         """
         # need to find nearest neighbors, then find the smallest one and merge, then
         #  refine grid again
+        neighbors = []
+        for i,slb in enumerate(self.slabs):
+            if (slab.neighbors(slb) and slab!=slb):
+                neighbors.append([i,slb])
         
-        return
-
+        # now we have list of neighbors, lets try merging smallest
+        vols = array([i[1].get_volume() for i in neighbors])
+        sinds = argsort(vols)
+        for ind in sinds:
+            i,islab = neighbors[ind]
+            merged_slab = slab.union(islab)
+            # now check to see if this merged_slab overlaps with any other slabs, if so reject
+            accept_new_slab = False
+            num_overlap = 0
+            for j,jslab in enumerate(self.slabs):
+                if (not merged_slab.intersection(jslab).is_empty()):
+                    num_overlap += 1
+                    # slab will intersect with both initial slabs, but if more then reject
+                    if (num_overlap > 2):
+                        break
+            if (num_overlap > 2):
+                # go to next neighbor
+                continue
+            else:
+                # accept the merged slab (by replacing the provided slab), delete the other two
+                self.slabs[i] = merged_slab
+                slab.set_empty()
+                return True
+        return False
 
     def plot(self, axes=None, plot=False, by_index=False):
         if self.grid.ndims == 3:
