@@ -27,28 +27,29 @@ def runTest():
         grid = Grid((40, None, None), geometry=geom)
 
     decomp = Decomp(grid, 64, geometry_biased=False)
-    if (show_plots):
+    if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)
 
     decomp = Decomp(grid, 64, geometry_biased=True)
-    if (show_plots):
+    if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)
 
     # refine and plot
     decomp.refine_empty(refill_empty=True)
-    if (show_plots):
+    if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)
 
     # try to merge any very small slabs
     decomp.refine_small()
-    if (show_plots):
+    if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)
 
     decomp.diagnostics(plot=True)
+
 
 if __name__ == "__main__":
     runTest()

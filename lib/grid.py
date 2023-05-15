@@ -56,12 +56,24 @@ class Slab:
         self.ndim = self.lowerBounds.size
 
     def __repr__(self):
-        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds) + "\n"
+        return (
+            "Slab bounds: \n"
+            + str(self.lowerBounds)
+            + "\n"
+            + str(self.upperBounds)
+            + "\n"
+        )
 
     def __str__(self):
-        return "Slab bounds: \n" + str(self.lowerBounds) + "\n" + str(self.upperBounds) + "\n"
-    
-    def __eq__(self, other_slab:Slab) -> bool:
+        return (
+            "Slab bounds: \n"
+            + str(self.lowerBounds)
+            + "\n"
+            + str(self.upperBounds)
+            + "\n"
+        )
+
+    def __eq__(self, other_slab: Slab) -> bool:
         """Check if slabs are identical
 
         Args:
@@ -70,8 +82,9 @@ class Slab:
         Returns:
             bool: whether slabs are equal
         """
-        return (all(self.lowerBounds == other_slab.lowerBounds)) and \
-          (all(self.upperBounds == other_slab.upperBounds))
+        return (all(self.lowerBounds == other_slab.lowerBounds)) and (
+            all(self.upperBounds == other_slab.upperBounds)
+        )
 
     def get_range(self, idim: int) -> ndarray:
         """Get the range of a particular dimension of the slab
@@ -114,7 +127,7 @@ class Slab:
         self.lowerBounds = array([0, 0, 0])
         self.upperBounds = array([0, 0, 0])
 
-    def neighbors(self,check_slab:Slab) -> bool:
+    def neighbors(self, check_slab: Slab) -> bool:
         """Determine whether this slab and the provided one are neighbors (ie. do their edges touch)
 
         Args:
@@ -125,11 +138,11 @@ class Slab:
         """
         union_length = self.union(check_slab).get_lengths()
         total_length = self.get_lengths() + check_slab.get_lengths()
-        if (any(union_length > total_length)): 
+        if any(union_length > total_length):
             return False
         return True
-    
-    def overlaps(self,check_slab:Slab) -> bool:
+
+    def overlaps(self, check_slab: Slab) -> bool:
         """Check whether this slab overlaps the provided slab
 
         Args:
@@ -139,11 +152,11 @@ class Slab:
             bool: whether slabs overlap or not
         """
         intersection = self.intersection(check_slab)
-        if (intersection.get_volume() > 0):
+        if intersection.get_volume() > 0:
             return True
         return False
-    
-    def union(self, check_slab:Slab) -> Slab:
+
+    def union(self, check_slab: Slab) -> Slab:
         """Get the smallest slab that contains both this slab and the provided one
 
         Args:
@@ -152,10 +165,12 @@ class Slab:
         Returns:
             Slab: minimal slab containing both this slab and provided slab
         """
-        return Slab(min(array([self.lowerBounds, check_slab.lowerBounds]),axis=0),\
-            max(array([self.upperBounds, check_slab.upperBounds]),axis=0))
-    
-    def intersection(self, check_slab:Slab) -> Slab:
+        return Slab(
+            min(array([self.lowerBounds, check_slab.lowerBounds]), axis=0),
+            max(array([self.upperBounds, check_slab.upperBounds]), axis=0),
+        )
+
+    def intersection(self, check_slab: Slab) -> Slab:
         """Get the largest region contained by this slab and the provided slab
 
         Args:
@@ -164,8 +179,11 @@ class Slab:
         Returns:
             Slab: maximum slab contained by both this and provided slab
         """
-        return Slab(max(array([self.lowerBounds, check_slab.lowerBounds]),axis=0),\
-            min(array([self.upperBounds, check_slab.upperBounds]),axis=0))
+        return Slab(
+            max(array([self.lowerBounds, check_slab.lowerBounds]), axis=0),
+            min(array([self.upperBounds, check_slab.upperBounds]), axis=0),
+        )
+
 
 class IndexSlab:
     """Class that creates a slab of indices and allows for each conversion between
@@ -522,7 +540,7 @@ class Grid:
 
 class Decomp:
     slabs = []
-    nslabs = 1 # desired number of slabs, not always equal to len(slabs)
+    nslabs = 1  # desired number of slabs, not always equal to len(slabs)
 
     def __init__(self, grid, nslabs, geometry_biased=True):
         self.nslabs = nslabs
@@ -530,16 +548,16 @@ class Decomp:
 
         # do regular decomposition
         self.__perform_regular_decomp()
-        
+
         # save for diagnostics later
         self.initial_volumes = array([i.get_volume() for i in self.slabs])
         self.initial_volume = sum(self.initial_volumes)
         self.__initial_geometry_diagnostics()
 
         # now do geometry-biased decomp (should be a better starting point)
-        if (geometry_biased):
+        if geometry_biased:
             self.__perform_geometry_biased_decomp()
-    
+
     def diagnostics(self, plot=False):
         # first lets look at the overall gain in memory allocation
         volumes = array([i.get_volume() for i in self.slabs])
@@ -548,11 +566,13 @@ class Decomp:
         logger.info("-- Memory --")
         logger.info(f"Initial domain volume: {self.initial_volume}")
         logger.info(f"Final domain volume: {total_volume}")
-        logger.info(f"Results in {total_volume/self.initial_volume*100:.1f}% memory usage.\n")
+        logger.info(
+            f"Results in {total_volume/self.initial_volume*100:.1f}% memory usage.\n"
+        )
 
         # get info about cells with geometry in the slab
         slab_geom_volume = zeros(len(self.slabs))
-        for islab,slab in enumerate(self.slabs):
+        for islab, slab in enumerate(self.slabs):
             num_cells = slab.get_lengths()
             # go through each dimension, get distributions of number of cells with geom
             has_geometry_slab = zeros(num_cells, dtype=float)
@@ -573,86 +593,155 @@ class Decomp:
         logger.info(f"Before Refinement:")
         logger.info(f"{self.nslabs} total domains")
         logger.info(f"Average {mean(self.initial_volumes):.1f} cells per domain")
-        logger.info(f"Average {mean(self.initial_slab_geom_volume):.1f} cells per domain containing geometry")
-        logger.info(f"Largest slab has {max(self.initial_slab_geom_volume)} cells containing geometry")
-        logger.info(f"{std(self.initial_slab_geom_volume):.1f} standard deviation of cells per domain containing geometry")
+        logger.info(
+            f"Average {mean(self.initial_slab_geom_volume):.1f} cells per domain containing geometry"
+        )
+        logger.info(
+            f"Largest slab has {max(self.initial_slab_geom_volume)} cells containing geometry"
+        )
+        logger.info(
+            f"{std(self.initial_slab_geom_volume):.1f} standard deviation of cells per domain containing geometry"
+        )
 
         logger.info(f"\nAfter Refinement:")
         logger.info(f"{len(self.slabs)} total domains")
         logger.info(f"Average {mean(volumes):.1f} cells per domain")
-        logger.info(f"Average {mean(slab_geom_volume):.1f} cells per domain containing geometry")
-        logger.info(f"Largest slab has {max(slab_geom_volume)} cells containing geometry")
-        logger.info(f"{std(slab_geom_volume):.1f} standard deviation of cells per domain containing geometry")
+        logger.info(
+            f"Average {mean(slab_geom_volume):.1f} cells per domain containing geometry"
+        )
+        logger.info(
+            f"Largest slab has {max(slab_geom_volume)} cells containing geometry"
+        )
+        logger.info(
+            f"{std(slab_geom_volume):.1f} standard deviation of cells per domain containing geometry"
+        )
 
-        if (plot):
+        if plot:
             # get histogram data
-            vrange = (min(array([self.initial_volumes,volumes])),max(array([self.initial_volumes,volumes])))
-            gvrange =(min(array([self.initial_slab_geom_volume,slab_geom_volume])),max(array([self.initial_slab_geom_volume,slab_geom_volume])))
+            vrange = (
+                min(array([self.initial_volumes, volumes])),
+                max(array([self.initial_volumes, volumes])),
+            )
+            gvrange = (
+                min(array([self.initial_slab_geom_volume, slab_geom_volume])),
+                max(array([self.initial_slab_geom_volume, slab_geom_volume])),
+            )
             pad = 5
             hist_resolution = 3
 
-            fig = plt.figure(figsize=(10,8))
+            fig = plt.figure(figsize=(10, 8))
             # before refinement
             ax = fig.add_subplot(221)
-            ax.hist(self.initial_volumes, bins=self.nslabs//hist_resolution, range=vrange, edgecolor = "black")
-            ax.set_xlabel('cells per domain')
-            ax.set_ylabel('number of domains')
+            ax.hist(
+                self.initial_volumes,
+                bins=self.nslabs // hist_resolution,
+                range=vrange,
+                edgecolor="black",
+            )
+            ax.set_xlabel("cells per domain")
+            ax.set_ylabel("number of domains")
 
-            ax.annotate("Total Cells", xy=(0.5, 1), xytext=(0, pad),
-                xycoords='axes fraction', textcoords='offset points',
-                size='large', ha='center', va='baseline')
-            
-            ax.annotate("Basic\nDecomp", xy=(0, 0.5), xytext=(-ax.yaxis.labelpad - pad, 0),
-                xycoords=ax.yaxis.label, textcoords='offset points',
-                size='large', ha='right', va='center')
+            ax.annotate(
+                "Total Cells",
+                xy=(0.5, 1),
+                xytext=(0, pad),
+                xycoords="axes fraction",
+                textcoords="offset points",
+                size="large",
+                ha="center",
+                va="baseline",
+            )
+
+            ax.annotate(
+                "Basic\nDecomp",
+                xy=(0, 0.5),
+                xytext=(-ax.yaxis.labelpad - pad, 0),
+                xycoords=ax.yaxis.label,
+                textcoords="offset points",
+                size="large",
+                ha="right",
+                va="center",
+            )
 
             ax = fig.add_subplot(222)
-            ax.hist(self.initial_slab_geom_volume, bins=self.nslabs//hist_resolution, range=gvrange, edgecolor = "black")
-            ax.set_xlabel('cells with geometry per domain')
-            ax.set_ylabel('number of domains')
+            ax.hist(
+                self.initial_slab_geom_volume,
+                bins=self.nslabs // hist_resolution,
+                range=gvrange,
+                edgecolor="black",
+            )
+            ax.set_xlabel("cells with geometry per domain")
+            ax.set_ylabel("number of domains")
 
-            ax.annotate("Cells With Geometry", xy=(0.5, 1), xytext=(0, pad),
-                xycoords='axes fraction', textcoords='offset points',
-                size='large', ha='center', va='baseline')
+            ax.annotate(
+                "Cells With Geometry",
+                xy=(0.5, 1),
+                xytext=(0, pad),
+                xycoords="axes fraction",
+                textcoords="offset points",
+                size="large",
+                ha="center",
+                va="baseline",
+            )
 
             # after refinement
             ax = fig.add_subplot(223)
-            ax.hist(volumes, bins=self.nslabs//hist_resolution, range=vrange, edgecolor = "black")
-            ax.set_xlabel('cells per domain')
-            ax.set_ylabel('number of domains')
+            ax.hist(
+                volumes,
+                bins=self.nslabs // hist_resolution,
+                range=vrange,
+                edgecolor="black",
+            )
+            ax.set_xlabel("cells per domain")
+            ax.set_ylabel("number of domains")
 
-            ax.annotate("Refined\nDecomp", xy=(0, 0.5), xytext=(-ax.yaxis.labelpad - pad, 0),
-                xycoords=ax.yaxis.label, textcoords='offset points',
-                size='large', ha='right', va='center')
+            ax.annotate(
+                "Refined\nDecomp",
+                xy=(0, 0.5),
+                xytext=(-ax.yaxis.labelpad - pad, 0),
+                xycoords=ax.yaxis.label,
+                textcoords="offset points",
+                size="large",
+                ha="right",
+                va="center",
+            )
 
             ax = fig.add_subplot(224)
-            ax.hist(slab_geom_volume, bins=self.nslabs//hist_resolution, range=gvrange, edgecolor = "black")
-            ax.set_xlabel('cells with geometry per domain')
-            ax.set_ylabel('number of domains')
-            
+            ax.hist(
+                slab_geom_volume,
+                bins=self.nslabs // hist_resolution,
+                range=gvrange,
+                edgecolor="black",
+            )
+            ax.set_xlabel("cells with geometry per domain")
+            ax.set_ylabel("number of domains")
+
             # display
             fig.tight_layout()
             fig.subplots_adjust(left=0.15, top=0.95)
             plt.show()
-    
+
     def refine(self) -> None:
         self.refine_empty()
         self.refine_small()
         self.diagnostics()
 
     def refine_small(self) -> None:
-        """Checks for outlyingly small slabs and attempts to merge them with neighbors
-        """
+        """Checks for outlyingly small slabs and attempts to merge them with neighbors"""
         # check if volume is more than 2 standard deviations from the average volume
         #  and if so try to merge with neighbor
         vols = array([islb.get_volume() for islb in self.slabs])
         stdvol = std(vols)
         avgvol = mean(vols)
         for slb in self.slabs:
-            if (slb.get_volume() < avgvol-2*stdvol):
-                logger.info(str(slb)+" is %.2f" % ((avgvol-slb.get_volume())/stdvol)+" standard deviations below the average volume. Attempting to merge with neighbor.")
+            if slb.get_volume() < avgvol - 2 * stdvol:
+                logger.info(
+                    str(slb)
+                    + " is %.2f" % ((avgvol - slb.get_volume()) / stdvol)
+                    + " standard deviations below the average volume. Attempting to merge with neighbor."
+                )
                 merged = self.__merge_with_nearest_smallest_neighbor(slb)
-                if (merged):
+                if merged:
                     self.refine_empty()
                     logger.info("Merged successfully")
                 else:
@@ -674,12 +763,12 @@ class Decomp:
 
         if refill_empty:
             # shoudl always be possible to split slabs, so this should never be infinite
-            while(self.nslabs != len(self.slabs)):
+            while self.nslabs != len(self.slabs):
                 self.__refill_empty_slabs()
                 self.__squeeze_empty()
 
         return
-    
+
     def __refill_empty_slabs(self) -> None:
         # if num slabs is less than desired, split largest slabs until
         #   we have the right number again
@@ -692,9 +781,7 @@ class Decomp:
             self.slabs.append(s2)
 
         logger.info(
-            "Largest slabs split to create "
-            + str(len(self.slabs))
-            + " total slabs."
+            "Largest slabs split to create " + str(len(self.slabs)) + " total slabs."
         )
         return
 
@@ -871,12 +958,12 @@ class Decomp:
         for i in range(self.grid.numCells[0]):
             for j in range(self.grid.numCells[1]):
                 for k in range(self.grid.numCells[2]):
-                    if self.grid.cells[(i,j,k)].has_geometry:
+                    if self.grid.cells[(i, j, k)].has_geometry:
                         has_geometry_domain[i, j, k] = 1
 
         # determine how to slice
         domain_size = copy(self.grid.numCells)
-        num_domains = ones(self.grid.ndims,dtype=int)
+        num_domains = ones(self.grid.ndims, dtype=int)
         for f in factors:
             ind = argmax(domain_size)
             domain_size[ind] /= f
@@ -886,16 +973,17 @@ class Decomp:
         logger.debug("GeometryBiasedDecomp: num_domains = " + str(num_domains))
 
         # get slices based on geometry
-        domain_edges = [zeros(nd+1) for nd in num_domains]
+        domain_edges = [zeros(nd + 1) for nd in num_domains]
         for idim in range(3):
             # get cumulative sum along idim axis for num cells with geom
-            idim_dist_cum = array(cumsum(
-                sum(has_geometry_domain, axis=((idim + 1) % 3, (idim + 2) % 3))
-            ),dtype=float)
+            idim_dist_cum = array(
+                cumsum(sum(has_geometry_domain, axis=((idim + 1) % 3, (idim + 2) % 3))),
+                dtype=float,
+            )
             idim_dist_cum /= max(idim_dist_cum)
-            frac = 1./num_domains[idim]
-            for islice in array(range(num_domains[idim]))+1:
-                domain_edges[idim][islice] = argmax(idim_dist_cum >= islice*frac)
+            frac = 1.0 / num_domains[idim]
+            for islice in array(range(num_domains[idim])) + 1:
+                domain_edges[idim][islice] = argmax(idim_dist_cum >= islice * frac)
             domain_edges[idim][-1] += 1
 
         # generate slabs
@@ -906,7 +994,7 @@ class Decomp:
             ub = ones(self.grid.ndims, dtype=int)
             for idim in range(self.grid.ndims):
                 lb[idim] = domain_edges[idim][coords[idim]]
-                ub[idim] = domain_edges[idim][coords[idim]+1]
+                ub[idim] = domain_edges[idim][coords[idim] + 1]
             self.slabs.append(Slab(lb, ub))
 
         logger.debug("Domain decomposed into slabs:")
@@ -914,39 +1002,39 @@ class Decomp:
             logger.debug(
                 "lb: " + str(slab.lowerBounds) + ", ub: " + str(slab.upperBounds)
             )
-    
-    def __merge_with_nearest_smallest_neighbor(self,slab:Slab) -> bool:
+
+    def __merge_with_nearest_smallest_neighbor(self, slab: Slab) -> bool:
         """Merge slab with its nearest, smallest neighbor
 
         Args:
             slab (Slab): slab to merge
-        
+
         Returns:
             (bool): whether a merge occurred or not
         """
         # need to find nearest neighbors, then find the smallest one and merge, then
         #  refine grid again
         neighbors = []
-        for i,slb in enumerate(self.slabs):
-            if (slab.neighbors(slb) and slab!=slb):
-                neighbors.append([i,slb])
-        
+        for i, slb in enumerate(self.slabs):
+            if slab.neighbors(slb) and slab != slb:
+                neighbors.append([i, slb])
+
         # now we have list of neighbors, lets try merging smallest
         vols = array([i[1].get_volume() for i in neighbors])
         sinds = argsort(vols)
         for ind in sinds:
-            i,islab = neighbors[ind]
+            i, islab = neighbors[ind]
             merged_slab = slab.union(islab)
             # now check to see if this merged_slab overlaps with any other slabs, if so reject
             accept_new_slab = False
             num_overlap = 0
-            for j,jslab in enumerate(self.slabs):
-                if (not merged_slab.intersection(jslab).is_empty()):
+            for j, jslab in enumerate(self.slabs):
+                if not merged_slab.intersection(jslab).is_empty():
                     num_overlap += 1
                     # slab will intersect with both initial slabs, but if more then reject
-                    if (num_overlap > 2):
+                    if num_overlap > 2:
                         break
-            if (num_overlap > 2):
+            if num_overlap > 2:
                 # go to next neighbor
                 continue
             else:
@@ -955,10 +1043,10 @@ class Decomp:
                 slab.set_empty()
                 return True
         return False
-    
+
     def __initial_geometry_diagnostics(self) -> None:
         self.initial_slab_geom_volume = zeros(len(self.slabs))
-        for islab,slab in enumerate(self.slabs):
+        for islab, slab in enumerate(self.slabs):
             num_cells = slab.get_lengths()
             # go through each dimension, get distributions of number of cells with geom
             has_geometry_slab = zeros(num_cells, dtype=float)
