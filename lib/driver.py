@@ -12,8 +12,8 @@ def runTest():
 
     # create geometry
     geometry_names = ["coupler_reduced", "Moon", "Torus_reduced", "C100_reduced"]
-    geom_name = geometry_names[0]
-    geom = Geometry(geom_name + ".stl")
+    geom_name = geometry_names[1]
+    geom = Geometry("./stl_files/" + geom_name + ".stl")
 
     # create grid
     # grid = Grid((10,15,20),(-1.0,-1.0,-1.0),(1.0,2.0,1.0))
