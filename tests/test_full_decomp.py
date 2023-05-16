@@ -16,5 +16,5 @@ def test_moon():
     decomp = Decomp(grid, 32, geometry_biased=True)
     decomp.refine_empty(refill_empty=True)
     decomp.refine_small()
-    decomp.diagnostics(plot=True)
+    decomp.diagnostics(plot=False)
 
