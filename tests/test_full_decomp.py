@@ -7,7 +7,7 @@ def test_moon():
 
     # create geometry
     geom_name = "Moon"
-    geom = Geometry("../slagg/stl_files/" + geom_name + ".stl")
+    geom = Geometry("./stl_files/Moon.stl")
 
     # create grid
     grid = Grid((20, 6, 40), geometry=geom)  # with moon
