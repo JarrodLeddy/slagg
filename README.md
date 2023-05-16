@@ -1,30 +1,30 @@
 # SLAGG - Simplified Load-balancing Algorithm for General Geometries
 
-Begin by creating a conda environment and installing pythonocc:
+<!---
+[![Documentation Status](https://readthedocs.org/projects/inference-tools/badge/?version=stable)](https://inference-tools.readthedocs.io/en/stable/?badge=stable)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/inference-tools?color=purple)](https://pypi.org/project/inference-tools/)
+[![DOI](https://zenodo.org/badge/149741362.svg)](https://zenodo.org/badge/latestdoi/149741362)
+-->
+[![GitHub license](https://img.shields.io/github/license/JarrodLeddy/slagg?color=blue)](https://github.com/JarrodLeddy/slagg/blob/main/LICENSE)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slagg)
 
+This package provides a set of Python-based tools for creating load-balanced
+domain decompositions that can be used for numerical simulations.
+
+## Features
+
+ - Ability to specify Grid, Geometry as STL, and desired Decomp slabs
+ 
+ - Basic Decomposition can be augmented with refinements to load-balance and reduce memory usage
+
+## Installation
+
+slagg is available from [PyPI](https://pypi.org/project/slagg/), 
+so can be easily installed using [pip](https://pip.pypa.io/en/stable/) as follows:
+```bash
+pip install slagg
 ```
-conda create --name pyoccenv
-conda activate pyoccenv
-conda install -c conda-forge pythonocc-core
-conda install -c conda-forge numpy-stl
-conda install -c conda-forge matplotlib
-```
-NOTE: From now on, always use conda install -c conda-forge if more packages need to be installed to avoid conflicts
 
-Then to run a solve:
+## Documentation
 
-```
-cd path/to/slagg/lib
-python main.py -f mycad.stp -x nx -y ny -z nz -d delta -n nrects
-```
-
-Where...
-
-* mycad.stp is a STEP geometry file (the repo has a sample file called C100_export.stp)
-* nx is the x-dimension of the grid to be superimposed on the geometry
-* ny is the y-dimension of the grid to be superimposed on the geometry
-* nz is the z-dimension of the grid to be superimposed on the geometry
-* delta is the uniform length, width and height of the grid cells
-* nrects is the target number of rectangles to be retuned in the final decomposition
-
-The flags and their corresponding arguments may be added in whatever order desired
+# Full documentation is available at [inference-tools.readthedocs.io](https://inference-tools.readthedocs.io/en/stable/).
