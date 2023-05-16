@@ -1,6 +1,7 @@
 import stl
 from grid import Grid, Decomp, Geometry
 
+
 def runTest():
     dim = 3
     nx = [30, 30, 30]

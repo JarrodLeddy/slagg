@@ -269,8 +269,8 @@ class Cell:
 
 
 class Grid:
-    """Class with data and methods for storing and computing grid quantities
-    """
+    """Class with data and methods for storing and computing grid quantities"""
+
     numCells = ()
     ndims = ()
     dx = ()
@@ -279,10 +279,16 @@ class Grid:
     cells = dict()
     geometry = None
 
-    def __init__(self, numCells: tuple, startPos:tuple=None, endPos:tuple=None, geometry:Geometry=None):
+    def __init__(
+        self,
+        numCells: tuple,
+        startPos: tuple = None,
+        endPos: tuple = None,
+        geometry: Geometry = None,
+    ):
         """Initialize the Grid object. If startPos and endPos are not provided, the
         geometry must be and will be used to calculate startPos and endPos automatically.
-        If numCells contains only one number with None other arguments (ie. numCells 
+        If numCells contains only one number with None other arguments (ie. numCells
         = [50,None,None]), then the largest dimension of the geometry will be given the
         requested number of cells and the other dimensions will be scaled accordingly to
         form cubic cells.
@@ -404,7 +410,7 @@ class Grid:
         """
         return self.cells[tuple(inds)]
 
-    def get_ind_at_pos(self, pos:ndarray, round=False) -> ndarray:
+    def get_ind_at_pos(self, pos: ndarray, round=False) -> ndarray:
         """Get array of indices for a given set of physical coordinates
 
         Args:
@@ -430,7 +436,7 @@ class Grid:
             + self.slab.lowerBounds
         )
 
-    def get_pos_at_ind(self, ind:ndarray) -> ndarray:
+    def get_pos_at_ind(self, ind: ndarray) -> ndarray:
         """Get array of positions for a given vector index
 
         Args:
@@ -443,7 +449,7 @@ class Grid:
             self.numCells
         ) * self.lengths + self.posSlab.lowerBounds
 
-    def set_geometry(self, geometry:Geometry) -> None:
+    def set_geometry(self, geometry: Geometry) -> None:
         """Add geometry to the grid. Checks for intersections between grid
         cells and the geometry triangles. Marks cells that are intersected
         as having geometry.  Then marks cells between these intersected ones
@@ -606,7 +612,7 @@ class Decomp:
     slabs = []
     nslabs = 1  # desired number of slabs, not always equal to len(slabs)
 
-    def __init__(self, grid:Grid, nslabs:int, geometry_biased=True):
+    def __init__(self, grid: Grid, nslabs: int, geometry_biased=True):
         """Initialize the Decomposition
 
         Args:
@@ -632,7 +638,7 @@ class Decomp:
     def diagnostics(self, plot=False):
         """Print (and optionally plot) diagnostics data about the level
         of improvement between the current decomp and the original standard decomp
-        
+
         Args:
             plot (bool, optional): Whether to show the diagnostic plots. Defaults to False.
         """
@@ -798,7 +804,7 @@ class Decomp:
             fig.subplots_adjust(left=0.15, top=0.95)
             plt.show()
 
-    def refine(self,plot=False) -> None:
+    def refine(self, plot=False) -> None:
         """One-stop call to apply all refinement techniques plus print diagnostics
 
         Args:
@@ -1042,8 +1048,8 @@ class Decomp:
 
     def __perform_geometry_biased_decomp(self):
         """Performs a decomposition that is biased such that the domain slabs will
-        contain as equal number of cells that contain geometry. The resulting number 
-        of slabs will be exactly the number requested by the user in initialization. 
+        contain as equal number of cells that contain geometry. The resulting number
+        of slabs will be exactly the number requested by the user in initialization.
         This uses prime factorization to split the largest dimensions the most, and
         uses the marginlized cumulative distributions of the geometry cell count to
         equally split.
@@ -1226,7 +1232,7 @@ class Decomp:
 
         return ax
 
-    def __prime_factors(self, n:int) -> list:
+    def __prime_factors(self, n: int) -> list:
         """Finds all of the prime factors of an integer
 
         Args:
@@ -1249,9 +1255,9 @@ class Decomp:
 
 
 class Geometry:
-    """Class for storing geometry data from stl
-    """
-    def __init__(self, file:str):
+    """Class for storing geometry data from stl"""
+
+    def __init__(self, file: str):
         """Initialize Geometry object
 
         Args:
@@ -1301,7 +1307,9 @@ class Geometry:
         else:
             return ax
 
-    def check_tricube_intersection(self, v0:ndarray, v1:ndarray, v2:ndarray, h:ndarray) -> bool:
+    def check_tricube_intersection(
+        self, v0: ndarray, v1: ndarray, v2: ndarray, h: ndarray
+    ) -> bool:
         """Checks a single triange (with vertices v0,v1,v2) for intersection with a cube
         centered at (0,0,0) with side length 2*h
 
@@ -1441,8 +1449,8 @@ class Geometry:
 
 
 class PlotRectangles:
-    """Unitility class for plotting rectangles with edges and surfaces
-    """
+    """Unitility class for plotting rectangles with edges and surfaces"""
+
     def draw_3D_box(ax, slab: Slab, draw_surfaces=False):
         """Plot 3D box on axis ax
 
@@ -1481,7 +1489,7 @@ class PlotRectangles:
             ax.plot_surface(xx, yy0, zz, color="r", alpha=0.2)
             ax.plot_surface(xx, yy1, zz, color="r", alpha=0.2)
 
-    def draw_2D_box(ax, slab:Slab):
+    def draw_2D_box(ax, slab: Slab):
         """Plot 2D box on axis ax
 
         Args:
@@ -1497,7 +1505,7 @@ class PlotRectangles:
         ax.plot(xx[1], yy[0], color="r")
         ax.plot(xx[1], yy[1], color="r")
 
-    def draw_1D_box(ax, slab:Slab):
+    def draw_1D_box(ax, slab: Slab):
         """Plot 1D box on axis ax. Box will appear as vertical, red lines on the axis
 
         Args:
