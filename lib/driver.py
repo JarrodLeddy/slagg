@@ -1,7 +1,6 @@
 import stl
 from grid import Grid, Decomp, Geometry
 
-
 def runTest():
     dim = 3
     nx = [30, 30, 30]
@@ -26,12 +25,12 @@ def runTest():
     elif geom_name == "coupler_reduced":
         grid = Grid((40, None, None), geometry=geom)
 
-    decomp = Decomp(grid, 64, geometry_biased=False)
+    decomp = Decomp(grid, 32, geometry_biased=False)
     if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)
 
-    decomp = Decomp(grid, 64, geometry_biased=True)
+    decomp = Decomp(grid, 32, geometry_biased=True)
     if show_plots:
         ax = geom.plot(plot=False)
         decomp.plot(axes=ax, plot=True)

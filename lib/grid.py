@@ -269,6 +269,8 @@ class Cell:
 
 
 class Grid:
+    """Class with data and methods for storing and computing grid quantities
+    """
     numCells = ()
     ndims = ()
     dx = ()
@@ -277,7 +279,20 @@ class Grid:
     cells = dict()
     geometry = None
 
-    def __init__(self, numCells: tuple, startPos=None, endPos=None, geometry=None):
+    def __init__(self, numCells: tuple, startPos:tuple=None, endPos:tuple=None, geometry:Geometry=None):
+        """Initialize the Grid object. If startPos and endPos are not provided, the
+        geometry must be and will be used to calculate startPos and endPos automatically.
+        If numCells contains only one number with None other arguments (ie. numCells 
+        = [50,None,None]), then the largest dimension of the geometry will be given the
+        requested number of cells and the other dimensions will be scaled accordingly to
+        form cubic cells.
+
+        Args:
+            numCells (tuple): number of cells in each dimension
+            startPos (tuple, optional): start position of the grid. Defaults to None.
+            endPos (tuple, optional): end position of the grid. Defaults to None.
+            geometry (Geometry, optional): geometry with which to calculate intersections with the grid. Defaults to None.
+        """
 
         self.ndims = len(numCells)
 
@@ -378,10 +393,27 @@ class Grid:
             self.__check_geometry_intersections()
             # self.__fill_between_intersections()
 
-    def get_cell(self, inds: tuple):
+    def get_cell(self, inds: tuple) -> Cell:
+        """Return cell at a given vector index
+
+        Args:
+            inds (tuple): vector index
+
+        Returns:
+            Cell: cell at the provided vector index
+        """
         return self.cells[tuple(inds)]
 
-    def get_ind_at_pos(self, pos, round=False):
+    def get_ind_at_pos(self, pos:ndarray, round=False) -> ndarray:
+        """Get array of indices for a given set of physical coordinates
+
+        Args:
+            pos (ndarray): set of physical coordinates
+            round (bool, optional): Whether the indices should be rounded or floats. Defaults to False.
+
+        Returns:
+            ndarray: set of vector indices corresponding to the provided physical coordinates
+        """
         if not round:
             return (array(pos) - self.posSlab.lowerBounds) / array(
                 self.lengths
@@ -398,20 +430,37 @@ class Grid:
             + self.slab.lowerBounds
         )
 
-    def get_pos_at_ind(self, ind):
+    def get_pos_at_ind(self, ind:ndarray) -> ndarray:
+        """Get array of positions for a given vector index
+
+        Args:
+            ind (ndarray): vector index
+
+        Returns:
+            ndarray: array of physical coordinates corresponding to ind
+        """
         return (array(ind) - array(self.slab.lowerBounds)) / array(
             self.numCells
         ) * self.lengths + self.posSlab.lowerBounds
 
-    def set_geometry(self, geometry):
+    def set_geometry(self, geometry:Geometry) -> None:
+        """Add geometry to the grid. Checks for intersections between grid
+        cells and the geometry triangles. Marks cells that are intersected
+        as having geometry.  Then marks cells between these intersected ones
+        to also be inside the geometry.  NOTE: Grid only supports a single geometry.
+
+        Args:
+            geometry (Geometry): geometry to check for intersections with grid.
+        """
         self.geoemtry = geometry
         self.__check_geometry_intersections()
         self.__fill_between_intersections()
         return
 
     def __check_geometry_intersections(self):
-        # Algorithm based on Fast 3D Triangle-Box Overlap Testing by Tomas Akenine-Moller
-        # For each triangle, check all cells for an intersection
+        """For each cell, check (up-to) all triangles for an intersection.
+        Algorithm based on Fast 3D Triangle-Box Overlap Testing by Tomas Akenine-Moller.
+        """
         logger.info(
             "Checking "
             + str(self.geometry.get_triangles().shape[0])
@@ -432,7 +481,11 @@ class Grid:
                     c.set_has_geometry(True)
                     break
 
-    def __fill_between_intersections(self):
+    def __fill_between_intersections(self) -> None:
+        """Mark cells between geometry intersections as also being inside the geometry.
+        This method works on two assumptions: (1) geometries are more than one cell wide
+        and (2) the edge of the simulation domain is *outside* the geometry, not inside.
+        """
         # assuming that no geometry is only one cell thick, so we want to fill
         #   has_geometry flag with True for all cells bewteen other trues
         for i in range(self.numCells[0]):
@@ -463,6 +516,17 @@ class Grid:
                         self.cells[(i, j, k)].set_has_geometry(True)
 
     def plot(self, axes=None, plot=False, rectangles=False, geometry_only=True):
+        """Plot the grid object
+
+        Args:
+            axes (axis, optional): Axes on which to plot. Defaults to None.
+            plot (bool, optional): Whether to show plot at the end. Defaults to False.
+            rectangles (bool, optional): Whether to draw rectangles (or dots). Defaults to False.
+            geometry_only (bool, optional): Whether to only plot cells that contain geometry. Defaults to True.
+
+        Returns:
+            _type_: _description_
+        """
         if self.ndims == 3:
             if not axes:
                 ax = plt.figure().add_subplot(projection="3d")
@@ -542,7 +606,14 @@ class Decomp:
     slabs = []
     nslabs = 1  # desired number of slabs, not always equal to len(slabs)
 
-    def __init__(self, grid, nslabs, geometry_biased=True):
+    def __init__(self, grid:Grid, nslabs:int, geometry_biased=True):
+        """Initialize the Decomposition
+
+        Args:
+            grid (Grid): The grid object on which the decomp should be performed.
+            nslabs (int): Desired number of slabs for the decomposition.
+            geometry_biased (bool, optional): Improve original decomp with geometry-biased algorithm. Defaults to True.
+        """
         self.nslabs = nslabs
         self.grid = grid
 
@@ -559,6 +630,12 @@ class Decomp:
             self.__perform_geometry_biased_decomp()
 
     def diagnostics(self, plot=False):
+        """Print (and optionally plot) diagnostics data about the level
+        of improvement between the current decomp and the original standard decomp
+        
+        Args:
+            plot (bool, optional): Whether to show the diagnostic plots. Defaults to False.
+        """
         # first lets look at the overall gain in memory allocation
         volumes = array([i.get_volume() for i in self.slabs])
         total_volume = sum(volumes)
@@ -721,10 +798,15 @@ class Decomp:
             fig.subplots_adjust(left=0.15, top=0.95)
             plt.show()
 
-    def refine(self) -> None:
+    def refine(self,plot=False) -> None:
+        """One-stop call to apply all refinement techniques plus print diagnostics
+
+        Args:
+            plot (bool, optional): Whether to show diagnostics plots. Defaults to False.
+        """
         self.refine_empty()
         self.refine_small()
-        self.diagnostics()
+        self.diagnostics(plot=False)
 
     def refine_small(self) -> None:
         """Checks for outlyingly small slabs and attempts to merge them with neighbors"""
@@ -770,6 +852,10 @@ class Decomp:
         return
 
     def __refill_empty_slabs(self) -> None:
+        """If the current number of slabs is less than the number the user asked for,
+        this method will split the largest slabs until the desired number of slabs is
+        obtained.
+        """
         # if num slabs is less than desired, split largest slabs until
         #   we have the right number again
         while len(self.slabs) < self.nslabs:
@@ -786,6 +872,10 @@ class Decomp:
         return
 
     def __squeeze_empty(self) -> None:
+        """Removes all cells that do not have geometry from decomp slabs, where possible, by
+        shrinking the bounds on the Slabs. Some slabs may end up empty (ie. containing
+        no cells at all) and they are removed from the decomp slabs list
+        """
         # remove cells from decomp that have no geometry in them (assuming full row/column)
         for slab in self.slabs:
             num_cells = slab.get_lengths()
@@ -911,6 +1001,11 @@ class Decomp:
         ]
 
     def __perform_regular_decomp(self):
+        """Performs a standard decomp. The resulting number of slabs will be
+        exactly the number requested by the user in initialization. The domain
+        slabs will be as cubic and equally-sized as possible. This uses prime
+        factorization to split the largest dimensions the most.
+        """
         self.slabs = []
         factors = self.__prime_factors(self.nslabs)
         logger.debug(
@@ -946,6 +1041,13 @@ class Decomp:
             )
 
     def __perform_geometry_biased_decomp(self):
+        """Performs a decomposition that is biased such that the domain slabs will
+        contain as equal number of cells that contain geometry. The resulting number 
+        of slabs will be exactly the number requested by the user in initialization. 
+        This uses prime factorization to split the largest dimensions the most, and
+        uses the marginlized cumulative distributions of the geometry cell count to
+        equally split.
+        """
         # reset slabs, get factors
         self.slabs = []
         factors = self.__prime_factors(self.nslabs)
@@ -1045,6 +1147,9 @@ class Decomp:
         return False
 
     def __initial_geometry_diagnostics(self) -> None:
+        """Prints (and optionally plots) diagnostic information about the quality
+        of the decomposition.
+        """
         self.initial_slab_geom_volume = zeros(len(self.slabs))
         for islab, slab in enumerate(self.slabs):
             num_cells = slab.get_lengths()
@@ -1065,6 +1170,16 @@ class Decomp:
         return
 
     def plot(self, axes=None, plot=False, by_index=False):
+        """Plots the decomposition as rectangles
+
+        Args:
+            axes (axis, optional): Axis on which to plot. Defaults to None.
+            plot (bool, optional): Whether or not to show the plot at the end. Defaults to False.
+            by_index (bool, optional): Whether the axees should be in index or physical coords. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         if self.grid.ndims == 3:
             if not axes:
                 ax = plt.figure().add_subplot(projection="3d")
@@ -1111,7 +1226,15 @@ class Decomp:
 
         return ax
 
-    def __prime_factors(self, n):
+    def __prime_factors(self, n:int) -> list:
+        """Finds all of the prime factors of an integer
+
+        Args:
+            n (int): number of factorize
+
+        Returns:
+            list: contains all the prime factors of n
+        """
         i = 2
         factors = []
         while i * i <= n:
@@ -1126,16 +1249,42 @@ class Decomp:
 
 
 class Geometry:
-    def __init__(self, file):
+    """Class for storing geometry data from stl
+    """
+    def __init__(self, file:str):
+        """Initialize Geometry object
+
+        Args:
+            file (str): STL file location and name
+        """
         self.stl_mesh = mesh.Mesh.from_file(file)
 
-    def get_vertices(self):
+    def get_vertices(self) -> ndarray:
+        """Get the verticies of the triangles
+
+        Returns:
+            ndarray: triangle vertices
+        """
         return self.stl_mesh.points.reshape([-1, 3])
 
-    def get_triangles(self):
+    def get_triangles(self) -> ndarray:
+        """Get the triangles in the form [N,9] where axis 1 holds the nine
+        coordinates (x,y,z) of the 3 triangle vertices
+
+        Returns:
+            ndarray: triangle vertices
+        """
         return self.stl_mesh.points
 
     def plot(self, plot=False):
+        """Plot the Goemetry object
+
+        Args:
+            plot (bool, optional): Whether to show the plot at the end. Defaults to False.
+
+        Returns:
+            axis: 3D axis to which more plots can be added
+        """
         from mpl_toolkits.mplot3d import Axes3D
         from mpl_toolkits.mplot3d.art3d import Poly3DCollection
         import matplotlib.pyplot as plt
@@ -1152,7 +1301,19 @@ class Geometry:
         else:
             return ax
 
-    def check_tricube_intersection(self, v0, v1, v2, h):
+    def check_tricube_intersection(self, v0:ndarray, v1:ndarray, v2:ndarray, h:ndarray) -> bool:
+        """Checks a single triange (with vertices v0,v1,v2) for intersection with a cube
+        centered at (0,0,0) with side length 2*h
+
+        Args:
+            v0 (ndarray): coordinates of first triangle vertex
+            v1 (ndarray): coordinates of second triangle vertex
+            v2 (ndarray): coordinates of third triangle vertex
+            h (ndarray): half-length of box edge
+
+        Returns:
+            bool: whether the cube and triangle intercept
+        """
         # checks intersection of triangle defined by v0, v1, v2 points
         #   and cube centered at origin with half-side length h
 
@@ -1280,7 +1441,16 @@ class Geometry:
 
 
 class PlotRectangles:
+    """Unitility class for plotting rectangles with edges and surfaces
+    """
     def draw_3D_box(ax, slab: Slab, draw_surfaces=False):
+        """Plot 3D box on axis ax
+
+        Args:
+            ax (axis): 3D matplotlib axis on which to plot the rectangle
+            slab (Slab): slab that defines the box
+            draw_surfaces (bool, optional): whether or not to draw the box faces. Defaults to False.
+        """
         x_range = slab.get_range(0)
         y_range = slab.get_range(1)
         z_range = slab.get_range(2)
@@ -1311,7 +1481,13 @@ class PlotRectangles:
             ax.plot_surface(xx, yy0, zz, color="r", alpha=0.2)
             ax.plot_surface(xx, yy1, zz, color="r", alpha=0.2)
 
-    def draw_2D_box(ax, slab):
+    def draw_2D_box(ax, slab:Slab):
+        """Plot 2D box on axis ax
+
+        Args:
+            ax (axis): 2D matplotlib axis on which to plot the rectangle
+            slab (Slab): slab that defines the box
+        """
         x_range = slab.get_range(0)
         y_range = slab.get_range(1)
 
@@ -1321,7 +1497,13 @@ class PlotRectangles:
         ax.plot(xx[1], yy[0], color="r")
         ax.plot(xx[1], yy[1], color="r")
 
-    def draw_1D_box(ax, slab):
+    def draw_1D_box(ax, slab:Slab):
+        """Plot 1D box on axis ax. Box will appear as vertical, red lines on the axis
+
+        Args:
+            ax (axis): 2D matplotlib axis on which to plot the rectangle
+            slab (Slab): slab that defines the box
+        """
         x_range = slab.get_range(0)
 
         xx, yy = meshgrid(x_range, array([-1, 1]))
