@@ -1,13 +1,15 @@
 import stl
+import pathlib
 from slagg.grid import Grid, Decomp, Geometry
 
+TESTS_PATH = pathlib.Path(__file__).parent
 
 def test_moon():
     dim = 3
 
     # create geometry
-    geom_name = "Moon"
-    geom = Geometry("./stl_files/Moon.stl")
+    file_name = TESTS_PATH / 'stl_files' / 'Moon.stl'
+    geom = Geometry(file_name)
 
     # create grid
     grid = Grid((20, 6, 40), geometry=geom)  # with moon
