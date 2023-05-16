@@ -26,5 +26,6 @@ pip install slagg
 ```
 
 ## Documentation
-
-# Full documentation is available at [inference-tools.readthedocs.io](https://inference-tools.readthedocs.io/en/stable/).
+<!---
+Full documentation is available at [inference-tools.readthedocs.io](https://inference-tools.readthedocs.io/en/stable/).
+-->
