@@ -5,7 +5,7 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/inference-tools?color=purple)](https://pypi.org/project/inference-tools/)
 [![DOI](https://zenodo.org/badge/149741362.svg)](https://zenodo.org/badge/latestdoi/149741362)
 -->
-[![GitHub license](https://img.shields.io/github/license/JarrodLeddy/slagg?color=blue)](https://github.com/JarrodLeddy/slagg/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/JarrodLeddy/slagg)](https://github.com/JarrodLeddy/slagg/blob/main/LICENSE)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slagg)
 
 This package provides a set of Python-based tools for creating load-balanced
