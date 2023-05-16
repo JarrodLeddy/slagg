@@ -1,4 +1,4 @@
-# slagg
+# SLAGG - Simplified Load-balancing Algorithm for General Geometries
 
 Begin by creating a conda environment and installing pythonocc:
 
