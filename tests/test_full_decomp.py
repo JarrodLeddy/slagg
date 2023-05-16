@@ -1,5 +1,5 @@
 import stl
-from grid import Grid, Decomp, Geometry
+from slagg.grid import Grid, Decomp, Geometry
 
 
 def test_moon():
