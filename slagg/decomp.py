@@ -1,6 +1,6 @@
-from utils import PlotRectangles, Slab, IndexSlab
-from grid import Grid, Cell
-from geometry import Geometry
+from slagg.utils import PlotRectangles, Slab, IndexSlab
+from slagg.grid import Grid, Cell
+from slagg.geometry import Geometry
 
 from numpy import (
     array,
