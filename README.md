@@ -26,6 +26,4 @@ pip install slagg
 ```
 
 ## Documentation
-<!---
-Full documentation is available at [inference-tools.readthedocs.io](https://inference-tools.readthedocs.io/en/stable/).
--->
+[Decomposition Tutorial](https://github.com/JarrodLeddy/slagg/blob/master/demos/decomp_tutorial.ipynb)
