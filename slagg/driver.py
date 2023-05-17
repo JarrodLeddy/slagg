@@ -1,5 +1,7 @@
 import stl
-from grid import Grid, Decomp, Geometry
+from grid import Grid
+from decomp import Decomp
+from geometry import Geometry
 
 
 def runTest():
