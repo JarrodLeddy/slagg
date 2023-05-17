@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 import logging, sys
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 requests_logger = logging.getLogger("requests")
-requests_logger.setLevel(logging.DEBUG)
+requests_logger.setLevel(logging.INFO)
 
 handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
+handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 requests_logger.addHandler(handler)
 
