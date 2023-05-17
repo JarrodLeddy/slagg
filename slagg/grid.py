@@ -334,7 +334,7 @@ class Grid:
                     elif not self.cells[(i, j, k)].has_geometry and inside:
                         self.cells[(i, j, k)].set_has_geometry(True)
 
-    def plot(self, axes=None, plot=False, rectangles=False, geometry_only=True):
+    def plot(self, axes=None, plot=True, rectangles=False, geometry_only=True):
         """Plot the grid object
 
         Args:

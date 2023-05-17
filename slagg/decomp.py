@@ -601,7 +601,7 @@ class Decomp:
             self.initial_slab_geom_volume[islab] = sum(has_geometry_slab)
         return
 
-    def plot(self, axes=None, plot=False, by_index=False):
+    def plot(self, axes=None, plot=True, by_index=False):
         """Plots the decomposition as rectangles
 
         Args:
