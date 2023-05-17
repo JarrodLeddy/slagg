@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from utils import Slab, IndexSlab, PlotRectangle
+from utils import Slab, IndexSlab, PlotRectangles
+from geometry import Geometry
 
 from numpy import (
     array,
@@ -17,7 +16,7 @@ from numpy import (
     sum,
 )
 import matplotlib.pyplot as plt
-from stl import mesh
+
 import logging, sys
 
 logger = logging.getLogger(__name__)

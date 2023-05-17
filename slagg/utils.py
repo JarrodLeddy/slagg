@@ -1,3 +1,18 @@
+from __future__ import annotations
+from numpy import min, max, array, ndarray, all, any, product, meshgrid
+
+import logging, sys
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+requests_logger = logging.getLogger("requests")
+requests_logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+requests_logger.addHandler(handler)
 
 class Slab:
     """Class that defines a slab based on lower and upper bounds. Can be any-dimensional."""
