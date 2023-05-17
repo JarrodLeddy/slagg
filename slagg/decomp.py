@@ -1,5 +1,21 @@
-from utils import PlotRectangle
-from numpy import array, ndarray, max, min, sum, argmax, mean, std, append, ones, cumsum
+from utils import PlotRectangles, Slab, IndexSlab
+from grid import Grid, Cell
+from geometry import Geometry
+
+from numpy import array, ndarray, max, min, sum, argmax, mean, std, append, ones, cumsum, copy, zeros, flip, argsort
+import matplotlib.pyplot as plt
+import logging, sys
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+requests_logger = logging.getLogger("requests")
+requests_logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+requests_logger.addHandler(handler)
 
 class Decomp:
     slabs = []

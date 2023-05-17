@@ -1,8 +1,23 @@
-from numpy import ndarray, abs, max
+from numpy import ndarray, abs, max, array, cross, ones, dot
+
+from stl import mesh
 
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.pyplot as plt
+
+import logging, sys
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+requests_logger = logging.getLogger("requests")
+requests_logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+requests_logger.addHandler(handler)
 
 class Geometry:
     """Class for storing geometry data from stl"""
