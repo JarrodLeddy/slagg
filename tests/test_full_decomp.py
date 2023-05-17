@@ -1,6 +1,6 @@
 import stl
 import pathlib
-from slagg.grid import Grid, Decomp, Geometry
+from slagg import Grid, Decomp, Geometry
 
 TESTS_PATH = pathlib.Path(__file__).parent
 
