@@ -30,6 +30,7 @@ handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 requests_logger.addHandler(handler)
 
+
 class Cell:
     """Class for storing a cell (box) for simulation. Holds a slab of indices, a position
     corresponding to the bottom left corner of the box, the edge length of the box
@@ -417,4 +418,3 @@ class Grid:
             plt.show()
 
         return ax
-

@@ -2,7 +2,23 @@ from utils import PlotRectangles, Slab, IndexSlab
 from grid import Grid, Cell
 from geometry import Geometry
 
-from numpy import array, ndarray, max, min, sum, argmax, mean, std, append, ones, cumsum, copy, zeros, flip, argsort
+from numpy import (
+    array,
+    ndarray,
+    max,
+    min,
+    sum,
+    argmax,
+    mean,
+    std,
+    append,
+    ones,
+    cumsum,
+    copy,
+    zeros,
+    flip,
+    argsort,
+)
 import matplotlib.pyplot as plt
 import logging, sys
 
@@ -16,6 +32,7 @@ handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 requests_logger.addHandler(handler)
+
 
 class Decomp:
     slabs = []

@@ -14,6 +14,7 @@ handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 requests_logger.addHandler(handler)
 
+
 class Slab:
     """Class that defines a slab based on lower and upper bounds. Can be any-dimensional."""
 

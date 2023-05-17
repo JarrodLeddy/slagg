@@ -19,6 +19,7 @@ handler.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 requests_logger.addHandler(handler)
 
+
 class Geometry:
     """Class for storing geometry data from stl"""
 
