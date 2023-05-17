@@ -48,7 +48,7 @@ class Geometry:
         """
         return self.stl_mesh.points
 
-    def plot(self, plot=False):
+    def plot(self, plot=True):
         """Plot the Goemetry object
 
         Args:
