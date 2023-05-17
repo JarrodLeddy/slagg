@@ -1,5 +1,5 @@
-from utils import Slab, IndexSlab, PlotRectangles
-from geometry import Geometry
+from slagg.utils import Slab, IndexSlab, PlotRectangles
+from slagg.geometry import Geometry
 
 from numpy import (
     array,
