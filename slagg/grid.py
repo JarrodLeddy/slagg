@@ -1,3 +1,4 @@
+from __future__ import annotations
 from slagg.utils import Slab, IndexSlab, PlotRectangles
 from slagg.geometry import Geometry
 
