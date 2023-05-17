@@ -72,7 +72,7 @@ class Decomp:
         volumes = array([i.get_volume() for i in self.slabs])
         total_volume = sum(volumes)
         logger.info("\n ========== Summary ==========\n")
-        logger.info("-- Memory --")
+        logger.info("-- Memory Efficiency --")
         logger.info(f"Initial domain volume: {self.initial_volume}")
         logger.info(f"Final domain volume: {total_volume}")
         logger.info(
@@ -98,7 +98,7 @@ class Decomp:
                             has_geometry_slab[i, j, k] = 1.0
             slab_geom_volume[islab] = sum(has_geometry_slab)
 
-        logger.info(f"\n-- Efficiency --")
+        logger.info("-- Compute Efficiency --")
         logger.info(f"Before Refinement:")
         logger.info(f"{self.nslabs} total domains")
         logger.info(f"Average {mean(self.initial_volumes):.1f} cells per domain")
@@ -122,7 +122,10 @@ class Decomp:
             f"Largest slab has {max(slab_geom_volume)} cells containing geometry"
         )
         logger.info(
-            f"{std(slab_geom_volume):.1f} standard deviation of cells per domain containing geometry"
+            f"{std(slab_geom_volume):.1f} standard deviation of cells per domain containing geometry\n"
+        )
+        logger.info(
+            f"Computational speed increased by as much as {100*(max(self.initial_slab_geom_volume)/max(slab_geom_volume)-1):.1f}%"
         )
 
         if plot:
@@ -249,7 +252,7 @@ class Decomp:
         avgvol = mean(vols)
         for slb in self.slabs:
             if slb.get_volume() < avgvol - 2 * stdvol:
-                logger.info(
+                logger.debug(
                     str(slb)
                     + " is %.2f" % ((avgvol - slb.get_volume()) / stdvol)
                     + " standard deviations below the average volume. Attempting to merge with neighbor."
@@ -257,9 +260,9 @@ class Decomp:
                 merged = self.__merge_with_nearest_smallest_neighbor(slb)
                 if merged:
                     self.refine_empty()
-                    logger.info("Merged successfully")
+                    logger.debug("Merged successfully")
                 else:
-                    logger.info("Merge failed")
+                    logger.debug("Merge failed")
         return
 
     def refine_empty(self, refill_empty=True) -> None:
@@ -298,7 +301,7 @@ class Decomp:
             self.slabs[argmax(slab_vols)] = s1
             self.slabs.append(s2)
 
-        logger.info(
+        logger.debug(
             "Largest slabs split to create " + str(len(self.slabs)) + " total slabs."
         )
         return
@@ -373,7 +376,7 @@ class Decomp:
         # remove any empty slabs
         self.slabs = [slab for slab in self.slabs if not slab.is_empty()]
 
-        logger.info(
+        logger.debug(
             "After initial refinement, " + str(len(self.slabs)) + " slabs remaining.\n"
         )
         return
@@ -615,7 +618,7 @@ class Decomp:
         if self.grid.ndims == 3:
             if not axes:
                 ax = plt.figure().add_subplot(projection="3d")
-                ax.set_aspect("equal")
+                #ax.set_aspect("equal")
             else:
                 ax = axes
 

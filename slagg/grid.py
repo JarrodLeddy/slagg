@@ -349,7 +349,7 @@ class Grid:
         if self.ndims == 3:
             if not axes:
                 ax = plt.figure().add_subplot(projection="3d")
-                ax.set_aspect("equal")
+                #ax.set_aspect("equal")
             else:
                 ax = axes
 
