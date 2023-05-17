@@ -9,8 +9,8 @@ except PackageNotFoundError:
 
     __version__ = get_version(root="..", relative_to=__file__)
 
-from grid import Grid
-from decomp import Decomp
-from geometry import Geometry
+from slagg.grid import Grid
+from slagg.decomp import Decomp
+from slagg.geometry import Geometry
 
 __all__ = ["__version__"]
